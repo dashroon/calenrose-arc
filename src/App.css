@@ -395,26 +395,25 @@ body {
 .insight-photos {
   display: flex;
   gap: 4px;
-  height: 280px;
+  align-items: flex-start;
 }
 
 .insight-photos-1 .insight-photo { flex: 1; }
 .insight-photos-2 .insight-photo { flex: 1; }
-.insight-photos-3 .insight-photo:first-child { flex: 2; }
 .insight-photos-3 .insight-photo { flex: 1; }
+.insight-photos-3 .insight-photo:first-child { flex: 1.4; }
 .insight-photos-4 .insight-photo { flex: 1; }
 
 .insight-photo {
   position: relative;
   overflow: hidden;
   background: var(--col-bg);
-  flex-shrink: 0;
+  flex: 1;
 }
 
 .insight-photo img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 

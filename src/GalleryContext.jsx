@@ -852,6 +852,7 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     savedTemplates, setSavedTemplates,
     notifyReady,
     insights,
+    basePhotosRef,
     // Actions
     handleFiles,
     clearAll,

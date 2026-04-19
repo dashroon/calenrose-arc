@@ -150,9 +150,10 @@ const GROUP_TYPE_COLORS = {
   'thematic cluster':      '#C48182',
 }
 
-function InsightGroup({ group, photos }) {
+function InsightGroup({ group, allPhotos, photos }) {
+  const sourcePhotos = allPhotos?.length ? allPhotos : photos
   const groupPhotos = (group.display_order || group.photo_indices)
-    .map(idx => photos[idx])
+    .map(idx => sourcePhotos[idx])
     .filter(Boolean)
 
   if (!groupPhotos.length) return null
@@ -173,7 +174,6 @@ function InsightGroup({ group, photos }) {
               src={photo.url}
               alt={photo.notes || ''}
               loading="lazy"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             {photo.notes && <div className="insight-photo-note">{photo.notes}</div>}
           </div>
@@ -184,7 +184,7 @@ function InsightGroup({ group, photos }) {
   )
 }
 
-function InsightsPage({ insights, photos, isGenerating }) {
+function InsightsPage({ insights, photos, allPhotos, isGenerating }) {
   if (isGenerating) {
     return (
       <div className="insights-loading">
@@ -212,7 +212,7 @@ function InsightsPage({ insights, photos, isGenerating }) {
       </div>
       <div className="insights-grid">
         {insights.map(group => (
-          <InsightGroup key={group.id} group={group} photos={photos} />
+          <InsightGroup key={group.id} group={group} photos={photos} allPhotos={allPhotos} />
         ))}
       </div>
     </div>
@@ -227,6 +227,7 @@ export default function GalleryArc() {
     displayPhotos, status,
     savedTemplates,
     insights,
+    basePhotosRef,
     handleFiles, clearAll,
     handleSelectVariation, handleTierClick, handleRestoreCut,
     saveTemplate, generateArc,
@@ -381,6 +382,7 @@ export default function GalleryArc() {
           <InsightsPage
             insights={insights}
             photos={displayPhotos}
+            allPhotos={basePhotosRef.current}
             isGenerating={isLoading && !insights}
           />
         </div>
