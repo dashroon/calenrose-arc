@@ -219,6 +219,132 @@ function InsightsPage({ insights, photos, allPhotos, isGenerating }) {
   )
 }
 
+// ── Instagram components ──────────────────────────────────────
+const FORMAT_LABELS = {
+  single:   'Single image',
+  multi:    'Multi-image post',
+  carousel: 'Carousel',
+}
+
+const FORMAT_COLORS = {
+  single:   '#C4A882',
+  multi:    '#82A882',
+  carousel: '#9B8EC4',
+}
+
+function InstagramPost({ post, allPhotos, index }) {
+  const [copied, setCopied] = useState(false)
+  const photos = (post.photo_indices || []).map(i => allPhotos[i]).filter(Boolean)
+  const color = FORMAT_COLORS[post.format] || '#CDC7BD'
+  const label = FORMAT_LABELS[post.format] || post.format
+
+  function copyCaption() {
+    const text = `${post.caption}\n\n${post.hashtags || ''}`
+    navigator.clipboard?.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const captionLines = post.caption?.split('\\n') || []
+
+  return (
+    <div className="ig-post">
+      <div className="ig-post-header">
+        <div className="ig-post-meta">
+          <span className="ig-format-badge" style={{ borderColor: color, color }}>{label}</span>
+          <span className="ig-post-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</span>
+          <span className="ig-post-title">{post.title}</span>
+        </div>
+        <span className="ig-post-num">0{index + 1}</span>
+      </div>
+
+      {/* Photo layout — carousel gets special treatment */}
+      {post.format === 'carousel' ? (
+        <div className="ig-photos ig-photos-carousel">
+          {photos[0] && (
+            <div className="ig-photo ig-photo-lead">
+              <img src={photos[0].url} alt={photos[0].notes || ''} loading="lazy" />
+              {photos[0].notes && <div className="ig-photo-note">{photos[0].notes}</div>}
+              <div className="ig-photo-badge">1 / {photos.length}</div>
+            </div>
+          )}
+          <div className="ig-carousel-strip">
+            {photos.slice(1).map((photo, i) => (
+              <div key={i} className="ig-photo">
+                <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={`ig-photos ig-photos-${post.format}`}>
+          {photos.map((photo, i) => (
+            <div key={i} className={`ig-photo${i === 0 ? ' ig-photo-lead' : ''}`}>
+              <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+              {photo.notes && <div className="ig-photo-note">{photo.notes}</div>}
+              {i === 0 && photos.length > 1 && (
+                <div className="ig-photo-badge">1 / {photos.length}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="ig-caption-block">
+        <div className="ig-caption-label">caption</div>
+        <div className="ig-caption-text">
+          {captionLines.map((line, i) => (
+            <span key={i}>{line}{i < captionLines.length - 1 && <br />}</span>
+          ))}
+        </div>
+        {post.hashtags && <div className="ig-hashtags">{post.hashtags}</div>}
+        <button className="ig-copy-btn" onClick={copyCaption}>
+          {copied ? 'Copied ✓' : 'Copy caption'}
+        </button>
+      </div>
+
+      <div className="ig-reasoning-block">
+        <p className="ig-reasoning">{post.reasoning}</p>
+        {post.posting_tip && (
+          <div className="ig-tip">
+            <span className="ig-tip-label">tip</span>
+            <span className="ig-tip-text">{post.posting_tip}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function InstagramPage({ instagram, allPhotos, isGenerating }) {
+  if (isGenerating) {
+    return (
+      <div className="insights-loading">
+        <span className="gl-status-spinner" style={{ width: 10, height: 10 }} />
+        <span>Building Instagram suggestions...</span>
+      </div>
+    )
+  }
+
+  if (!instagram?.length) {
+    return <div className="insights-empty">Generate an arc first to see Instagram suggestions.</div>
+  }
+
+  return (
+    <div className="ig-page">
+      <div className="ig-page-intro">
+        <span className="insights-intro-label">Instagram</span>
+        <span className="insights-intro-text">3 post suggestions — single, multi-image, and carousel.</span>
+      </div>
+      <div className="ig-posts">
+        {instagram.map((post, i) => (
+          <InstagramPost key={post.id} post={post} allPhotos={allPhotos || []} index={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function GalleryArc() {
   const {
@@ -227,6 +353,7 @@ export default function GalleryArc() {
     displayPhotos, status,
     savedTemplates,
     insights,
+    instagram,
     basePhotosRef,
     handleFiles, clearAll,
     handleSelectVariation, handleTierClick, handleRestoreCut,
@@ -242,7 +369,6 @@ export default function GalleryArc() {
   const fileInputRef  = useRef(null)
   const addMoreRef    = useRef(null)
 
-  // Tell context this tab is active (so it knows not to show the badge)
   useEffect(() => {
     setGalleryActive(true)
     return () => setGalleryActive(false)
@@ -253,8 +379,9 @@ export default function GalleryArc() {
   const hasPhotos  = photos.length > 0
   const hasArc     = variations.length > 0
   const isLoading  = status?.state === 'loading'
-  const hasFiles   = photos.some(p => p.file) // false when restored from localStorage
+  const hasFiles   = photos.some(p => p.file)
   const selectedVariation = variations.find(v => v.id === selectedVariationId)
+  const allPhotos  = basePhotosRef.current?.length ? basePhotosRef.current : displayPhotos
 
   return (
     <div className="gallery-layout-page">
@@ -305,7 +432,7 @@ export default function GalleryArc() {
         )}
       </div>
 
-      {/* Status / arc summary */}
+      {/* Status */}
       {status && (
         <div className={`gl-status${status.state === 'error' ? ' gl-status-error' : status.state === 'warn' ? ' gl-status-warn' : ''}`}>
           {isLoading && <span className="gl-status-spinner" />}
@@ -359,6 +486,9 @@ export default function GalleryArc() {
           <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => setActiveTab('insights')}>
             Insights{insights ? ` · ${insights.length}` : ''}
           </button>
+          <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => setActiveTab('instagram')}>
+            Instagram{instagram ? ' · 3' : ''}
+          </button>
         </div>
       )}
 
@@ -382,8 +512,19 @@ export default function GalleryArc() {
           <InsightsPage
             insights={insights}
             photos={displayPhotos}
-            allPhotos={basePhotosRef.current}
+            allPhotos={allPhotos}
             isGenerating={isLoading && !insights}
+          />
+        </div>
+      )}
+
+      {/* Instagram tab */}
+      {hasArc && activeTab === 'instagram' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <InstagramPage
+            instagram={instagram}
+            allPhotos={allPhotos}
+            isGenerating={isLoading && !instagram}
           />
         </div>
       )}

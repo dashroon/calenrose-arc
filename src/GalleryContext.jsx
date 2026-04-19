@@ -11,7 +11,8 @@ const CAT_COLORS = {
 const CAT_ORDER = ['getting ready', 'ceremony', 'portraits', 'reception', 'details']
 const SESSION_KEY   = 'calenrose_arc_session'
 const TEMPLATES_KEY = 'calenrose_arc_templates'
-const INSIGHTS_KEY  = 'calenrose_arc_insights'
+const INSIGHTS_KEY   = 'calenrose_arc_insights'
+const INSTAGRAM_KEY  = 'calenrose_arc_instagram'
 const TIERS = ['hero', 'supporting', 'cut']
 
 export { CAT_COLORS, CAT_ORDER, TIERS }
@@ -160,6 +161,7 @@ export function GalleryProvider({ children }) {
   // notifyReady: null = nothing, { count } = processing done while user was away
   const [notifyReady, setNotifyReady]     = useState(null)
   const [insights, setInsights]           = useState(null)
+  const [instagram, setInstagram]         = useState(null)
 
   const basePhotosRef  = useRef([])
   const galleryActiveRef = useRef(false) // true while GalleryLayout is mounted
@@ -178,6 +180,8 @@ export function GalleryProvider({ children }) {
       }
       const savedInsights = loadLS(INSIGHTS_KEY)
       if (savedInsights) setInsights(savedInsights)
+      const savedInstagram = loadLS(INSTAGRAM_KEY)
+      if (savedInstagram) setInstagram(savedInstagram)
       const age = saved.savedAt ? Math.round((Date.now() - saved.savedAt) / 60000) : null
       const ageStr = age !== null
         ? (age < 60 ? `${age}m ago` : `${Math.round(age / 60)}h ago`)
@@ -267,10 +271,11 @@ export function GalleryProvider({ children }) {
   const clearAll = useCallback((currentPhotos) => {
     currentPhotos.forEach(p => { try { URL.revokeObjectURL(p.url) } catch {} })
     setPhotosRaw([]); setVariations([]); setSelectedVariationId(null)
-    setDisplayPhotos([]); setStatus(null); setNotifyReady(null); setInsights(null)
+    setDisplayPhotos([]); setStatus(null); setNotifyReady(null); setInsights(null); setInstagram(null)
     basePhotosRef.current = []
     localStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(INSIGHTS_KEY)
+    localStorage.removeItem(INSTAGRAM_KEY)
   }, [])
 
   const applyVariationFull = useCallback((variation, basePhotos) => {
@@ -409,6 +414,131 @@ Rules:
 
     } catch (err) {
       console.warn('Insights generation failed:', err.message)
+    }
+  }
+
+  // ── Instagram generation ──────────────────────────────────────
+  async function generateInstagram(enrichedPhotos) {
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+    if (!apiKey || !enrichedPhotos.length) return
+
+    try {
+      const catChar = { 'getting ready':'g', 'ceremony':'c', 'portraits':'p', 'reception':'r', 'details':'d' }
+      const engChar = { 'high':'h', 'medium':'m', 'quiet':'q' }
+
+      const photoSummary = enrichedPhotos.map((p, i) => {
+        const cat = catChar[p.category] || 'd'
+        const ori = p.orientation === 'portrait' ? 'v' : 'l'
+        const score = p.hero_score || 5
+        const eng = engChar[p.energy] || 'm'
+        const notes = p.notes ? ` "${p.notes}"` : ''
+        return `${i}:${cat}${ori}${score}${eng}${notes}`
+      }).join('\n')
+
+      const prompt = `You are the creative director and Instagram strategist for CALENROSE (@calenrose on Instagram), a NYC wedding photography duo. Published in Vogue, New York Times, Over The Moon. Both former professional dancers. Their Instagram voice: poetic, witty, intimate, specific. Captions like "nonlinear memories from mexico", "well-suited to a little chaos: veils, dinner parties, Calenrose", "visual feast: disco/disco nap landscapes", "energy. energy. energy."
+
+They shoot on film AND digital AND iPhone. Editorial and documentary. They never post boring chronological recaps. Every post has a point of view.
+
+You have analyzed ${enrichedPhotos.length} photos from a wedding. Here is the full analysis:
+g=getting ready c=ceremony p=portraits r=reception d=details
+l=landscape v=portrait  score=1-10  h=high m=medium q=quiet
+
+${photoSummary}
+
+Create exactly 3 Instagram post suggestions. Each should be genuinely different in format and strategy:
+
+Post 1: A SINGLE IMAGE — the one photo from this shoot that would perform best as a standalone Instagram post. Should stop the scroll. Maximum emotional or visual impact. Portrait orientation preferred for feed.
+
+Post 2: A MULTI-IMAGE POST (2-10 images) — a tight editorial sequence that tells a moment or a feeling. Not the whole day — a chapter. Could be all from one moment, or a thematic grouping. Works as a swipe-through story.
+
+Post 3: A CAROUSEL (10-20 images) — the full day as CALENROSE would tell it on Instagram. Non-linear, memory-driven, their signature style. Start unexpected, build, release. This is their signature post format.
+
+Return ONLY a JSON array. Start with [ end with ]. No markdown.
+
+[
+  {
+    "id": "1",
+    "format": "single",
+    "title": "short lowercase title",
+    "photo_indices": [47],
+    "caption": "The full Instagram caption in CALENROSE's voice. Can be 1-3 sentences or a single evocative phrase. Include line breaks where appropriate using \\n. No hashtags in the caption itself.",
+    "hashtags": "#CALENROSE #destinationwedding #weddingphotography",
+    "reasoning": "2 sentences explaining why this specific photo/sequence works for Instagram — what makes it stop-scroll, why this caption fits, what story it tells to someone who wasn't there.",
+    "posting_tip": "one practical tip — best time to post, what to say in stories to accompany it, etc."
+  },
+  {
+    "id": "2",
+    "format": "multi",
+    "title": "short lowercase title",
+    "photo_indices": [3, 47, 12, 8],
+    "caption": "Caption in their voice",
+    "hashtags": "#CALENROSE #weddingphotography",
+    "reasoning": "Why this sequence works as a swipe-through",
+    "posting_tip": "practical tip"
+  },
+  {
+    "id": "3",
+    "format": "carousel",
+    "title": "short lowercase title",
+    "photo_indices": [47, 3, 182, 0, 95, 12, 201, 88, 156, 34, 67, 23, 145, 89],
+    "caption": "Caption in their voice",
+    "hashtags": "#CALENROSE #weddingphotography #vogueweddings",
+    "reasoning": "Why this sequence tells the day's story in their signature non-linear style",
+    "posting_tip": "practical tip"
+  }
+]
+
+format values: "single" | "multi" | "carousel"
+
+Rules for photo selection:
+- Single: highest hero_score portrait-orientation photo with genuine emotional content
+- Multi: 2-10 photos, tight thematic or moment-based grouping, strong opener
+- Carousel: 10-20 photos, non-linear, CALENROSE signature arc — unexpected opener, builds to peak, ends quietly
+- Prioritize hero_score 7+ for single and multi openers
+- Carousel should span the full day but not follow chronological order
+- Each post should feel like a different facet of the same wedding
+
+Caption rules:
+- Write in their actual voice — reference their caption style
+- Lowercase, poetic, terse
+- Can be a quote, an observation, a fragment
+- Never "check out this amazing wedding" or generic photographer language
+- Can reference the specific feeling of this wedding day based on the arc summary`
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 3000,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      })
+
+      if (!resp.ok) return
+
+      const data = await resp.json()
+      const raw = data.content?.map(c => c.text || '').join('') || ''
+      const start = raw.indexOf('[')
+      const end = raw.lastIndexOf(']')
+      if (start === -1 || end <= start) return
+
+      const normalized = raw.slice(start, end + 1)
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u2014|\u2013/g, '-')
+
+      const result = JSON.parse(normalized)
+      setInstagram(result)
+      saveLS(INSTAGRAM_KEY, result)
+
+    } catch (err) {
+      console.warn('Instagram generation failed:', err.message)
     }
   }
 
@@ -833,8 +963,9 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     const summary = aiResult?.arc_summary || `${enriched.length} photos analyzed`
     setStatus({ state: 'done', msg: summary })
 
-    // Fire insights generation in background — no await
+    // Fire background passes — no await
     generateInsights(enriched)
+    generateInstagram(enriched)
 
     // If the user navigated away, trigger the ready notification
     if (!galleryActiveRef.current) {
@@ -852,6 +983,7 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     savedTemplates, setSavedTemplates,
     notifyReady,
     insights,
+    instagram,
     basePhotosRef,
     // Actions
     handleFiles,
