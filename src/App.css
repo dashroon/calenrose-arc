@@ -517,9 +517,21 @@ body {
 }
 
 .ig-photos-single .ig-photo { flex: 1; }
+.ig-photos-single .ig-photo img {
+  max-height: 55vh;
+  width: 100%;
+  object-fit: contain;
+  background: var(--col-bg);
+}
 
+.ig-photos-multi { height: 300px; }
 .ig-photos-multi .ig-photo-lead { flex: 2; }
 .ig-photos-multi .ig-photo { flex: 1; }
+.ig-photos-multi .ig-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .ig-photos-carousel {
   flex-direction: column;
@@ -527,6 +539,11 @@ body {
 }
 
 .ig-photos-carousel .ig-photo-lead { width: 100%; }
+.ig-photos-carousel .ig-photo-lead img {
+  max-height: 45vh;
+  width: 100%;
+  object-fit: cover;
+}
 
 .ig-carousel-strip {
   display: flex;
@@ -537,7 +554,13 @@ body {
 
 .ig-carousel-strip .ig-photo {
   flex-shrink: 0;
-  width: 120px;
+  width: 90px;
+  height: 90px;
+}
+.ig-carousel-strip .ig-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .ig-photo {

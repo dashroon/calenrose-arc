@@ -461,8 +461,8 @@ Return ONLY a JSON array. Start with [ end with ]. No markdown.
     "format": "single",
     "title": "short lowercase title",
     "photo_indices": [47],
-    "caption": "The full Instagram caption in CALENROSE's voice. Can be 1-3 sentences or a single evocative phrase. Include line breaks where appropriate using \\n. No hashtags in the caption itself.",
-    "hashtags": "#CALENROSE #destinationwedding #weddingphotography",
+    "caption": "Caption in CALENROSE's voice. SHORT — 1 sentence or fragment. No hashtags here.",
+    "hashtags": "#CALENROSE #specificvenueorlocation",
     "reasoning": "2 sentences explaining why this specific photo/sequence works for Instagram — what makes it stop-scroll, why this caption fits, what story it tells to someone who wasn't there.",
     "posting_tip": "one practical tip — best time to post, what to say in stories to accompany it, etc."
   },
@@ -498,12 +498,25 @@ Rules for photo selection:
 - Carousel should span the full day but not follow chronological order
 - Each post should feel like a different facet of the same wedding
 
-Caption rules:
-- Write in their actual voice — reference their caption style
-- Lowercase, poetic, terse
-- Can be a quote, an observation, a fragment
-- Never "check out this amazing wedding" or generic photographer language
-- Can reference the specific feeling of this wedding day based on the arc summary`
+Caption rules — critical:
+- SHORT. 1-2 sentences max. Often just a fragment or single line.
+- Sound like a human, not an AI copywriter. No "whispers of" or "tapestry of" or "journey" or "timeless" or "captured" or "love story" or "magical moment".
+- Match their ACTUAL Instagram voice. Study these real captions:
+  "energy. energy. energy."
+  "well-suited to a little chaos: veils, dinner parties, Calenrose."
+  "nonlinear memories from mexico."
+  "midnight in the garden of cake and cotswolds"
+  "afters: last call isn't really a thing."
+  "Slim called. He said bring the hot goss."
+  "IN, forever: restaurant weddings."
+  "visual feast: disco/disco nap landscapes"
+  "dear parties, we think about you all the time."
+- Pattern: lowercase. specific nouns. dry wit. terse. colon for rhythm. period mid-sentence. sometimes just a fragment.
+- Reference specific details from THIS wedding — city, a quirky detail, something unexpected from the photos.
+- BANNED WORDS: love, beautiful, stunning, magical, forever, journey, story, memories (used sentimentally), breathtaking, perfect, dream
+- Sound like a cool NYC photographer texting a friend about a shoot. Not a wedding blog post.
+
+hashtags: 3-4 max. Always #CALENROSE. Add specific ones based on this wedding (city, venue if identifiable, #vogueweddings if it fits). No generic tags like #love #wedding #beautiful #photography.`
 
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
