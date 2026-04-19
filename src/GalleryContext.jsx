@@ -9,8 +9,9 @@ const CAT_COLORS = {
   'details':       '#82A4C4',
 }
 const CAT_ORDER = ['getting ready', 'ceremony', 'portraits', 'reception', 'details']
-const SESSION_KEY  = 'calenrose_arc_session'
+const SESSION_KEY   = 'calenrose_arc_session'
 const TEMPLATES_KEY = 'calenrose_arc_templates'
+const INSIGHTS_KEY  = 'calenrose_arc_insights'
 const TIERS = ['hero', 'supporting', 'cut']
 
 export { CAT_COLORS, CAT_ORDER, TIERS }
@@ -158,6 +159,7 @@ export function GalleryProvider({ children }) {
   const [savedTemplates, setSavedTemplates] = useState(() => loadLS(TEMPLATES_KEY) || [])
   // notifyReady: null = nothing, { count } = processing done while user was away
   const [notifyReady, setNotifyReady]     = useState(null)
+  const [insights, setInsights]           = useState(null)
 
   const basePhotosRef  = useRef([])
   const galleryActiveRef = useRef(false) // true while GalleryLayout is mounted
@@ -174,6 +176,8 @@ export function GalleryProvider({ children }) {
         applyVariationFullInner(saved.variations[0], saved.photos)
         setSelectedVariationId(saved.variations[0].id)
       }
+      const savedInsights = loadLS(INSIGHTS_KEY)
+      if (savedInsights) setInsights(savedInsights)
       const age = saved.savedAt ? Math.round((Date.now() - saved.savedAt) / 60000) : null
       const ageStr = age !== null
         ? (age < 60 ? `${age}m ago` : `${Math.round(age / 60)}h ago`)
@@ -263,9 +267,10 @@ export function GalleryProvider({ children }) {
   const clearAll = useCallback((currentPhotos) => {
     currentPhotos.forEach(p => { try { URL.revokeObjectURL(p.url) } catch {} })
     setPhotosRaw([]); setVariations([]); setSelectedVariationId(null)
-    setDisplayPhotos([]); setStatus(null); setNotifyReady(null)
+    setDisplayPhotos([]); setStatus(null); setNotifyReady(null); setInsights(null)
     basePhotosRef.current = []
     localStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem(INSIGHTS_KEY)
   }, [])
 
   const applyVariationFull = useCallback((variation, basePhotos) => {
@@ -311,6 +316,101 @@ export function GalleryProvider({ children }) {
   const clearNotify = useCallback(() => {
     setNotifyReady(null)
   }, [])
+
+  // ── Insights generation ───────────────────────────────────────
+  async function generateInsights(enrichedPhotos) {
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+    if (!apiKey || !enrichedPhotos.length) return
+
+    try {
+      const catChar = { 'getting ready':'g', 'ceremony':'c', 'portraits':'p', 'reception':'r', 'details':'d' }
+      const engChar = { 'high':'h', 'medium':'m', 'quiet':'q' }
+
+      const photoSummary = enrichedPhotos.map((p, i) => {
+        const cat = catChar[p.category] || 'd'
+        const ori = p.orientation === 'portrait' ? 'v' : 'l'
+        const score = p.hero_score || 5
+        const eng = engChar[p.energy] || 'm'
+        const notes = p.notes ? ` "${p.notes}"` : ''
+        return `${i}:${cat}${ori}${score}${eng}${notes}`
+      }).join('\n')
+
+      const prompt = `You are the creative director for CALENROSE, a NYC wedding photography duo. Editorial, documentary, visceral. Both former professional dancers. Published in Vogue. Their philosophy: memory is non-linear. They find meaning in the spaces between the obvious moments.
+
+You have analyzed ${enrichedPhotos.length} photos from a wedding. Here is the full analysis:
+g=getting ready c=ceremony p=portraits r=reception d=details
+l=landscape v=portrait  score=1-10  h=high m=medium q=quiet
+
+${photoSummary}
+
+Identify 8-12 of the most interesting and specific photo groupings — pairs or small groups of 2-4 photos that work together in a compelling way. Look for:
+- Visual echoes: photos that rhyme compositionally, tonally, or in their use of light
+- Emotional counterpoints: a quiet photo that makes a loud one hit harder, or vice versa
+- Narrative pairs: a before/after, a cause and effect, a question and answer
+- Unexpected connections: photos from completely different moments that belong together for a reason nobody would expect
+- Thematic clusters: 3-4 photos that collectively define the feeling of the day
+
+Be specific about THESE photos. Reference what you actually see in the notes. Don't give generic photography advice.
+
+Return ONLY a JSON array. Start with [ end with ]. No markdown.
+
+[
+  {
+    "id": "1",
+    "photo_indices": [47, 3],
+    "group_type": "emotional counterpoint",
+    "title": "short lowercase title like a CALENROSE Instagram caption",
+    "reasoning": "2-3 sentences explaining exactly why these photos work together — be specific about what you see in them, reference their visual qualities, emotional content, and what they mean when placed together. Write in CALENROSE's voice: direct, poetic, specific.",
+    "display_order": [47, 3]
+  }
+]
+
+group_type options: "visual echo" | "emotional counterpoint" | "narrative pair" | "unexpected connection" | "thematic cluster"
+
+Rules:
+- Each photo index should appear in at most 2 groupings total
+- Prefer groupings that cross category boundaries (ceremony photo with reception photo, detail with portrait)
+- At least 2 groupings should be "unexpected connection" — photos from completely different moments
+- At least 2 should be "thematic cluster" with 3-4 photos
+- The reasoning must reference specific details from the photo notes
+- Write titles in CALENROSE Instagram voice: lowercase, poetic, terse`
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      })
+
+      if (!resp.ok) return
+
+      const data = await resp.json()
+      const raw = data.content?.map(c => c.text || '').join('') || ''
+      const start = raw.indexOf('[')
+      const end = raw.lastIndexOf(']')
+      if (start === -1 || end <= start) return
+
+      const normalized = raw.slice(start, end + 1)
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u2014|\u2013/g, '-')
+
+      const result = JSON.parse(normalized)
+      setInsights(result)
+      saveLS(INSIGHTS_KEY, result)
+
+    } catch (err) {
+      console.warn('Insights generation failed:', err.message)
+    }
+  }
 
   // ── AI arc generation (survives tab switches) ─────────────────
   const generateArc = useCallback(async (photos) => {
@@ -733,6 +833,9 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     const summary = aiResult?.arc_summary || `${enriched.length} photos analyzed`
     setStatus({ state: 'done', msg: summary })
 
+    // Fire insights generation in background — no await
+    generateInsights(enriched)
+
     // If the user navigated away, trigger the ready notification
     if (!galleryActiveRef.current) {
       setNotifyReady({ count: enriched.length })
@@ -748,6 +851,7 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     status,
     savedTemplates, setSavedTemplates,
     notifyReady,
+    insights,
     // Actions
     handleFiles,
     clearAll,

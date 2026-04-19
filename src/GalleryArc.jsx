@@ -133,6 +133,92 @@ function ArcStats({ photos }) {
   )
 }
 
+// ── Insights components ───────────────────────────────────────
+const GROUP_TYPE_LABELS = {
+  'visual echo':           'Visual echo',
+  'emotional counterpoint':'Emotional counterpoint',
+  'narrative pair':        'Narrative pair',
+  'unexpected connection': 'Unexpected connection',
+  'thematic cluster':      'Thematic cluster',
+}
+
+const GROUP_TYPE_COLORS = {
+  'visual echo':           '#82A4C4',
+  'emotional counterpoint':'#C4A882',
+  'narrative pair':        '#82A882',
+  'unexpected connection': '#9B8EC4',
+  'thematic cluster':      '#C48182',
+}
+
+function InsightGroup({ group, photos }) {
+  const groupPhotos = (group.display_order || group.photo_indices)
+    .map(idx => photos[idx])
+    .filter(Boolean)
+
+  if (!groupPhotos.length) return null
+
+  const color = GROUP_TYPE_COLORS[group.group_type] || '#CDC7BD'
+  const label = GROUP_TYPE_LABELS[group.group_type] || group.group_type
+
+  return (
+    <div className="insight-group">
+      <div className="insight-group-header">
+        <span className="insight-type-badge" style={{ borderColor: color, color }}>{label}</span>
+        <span className="insight-title">{group.title}</span>
+      </div>
+      <div className={`insight-photos insight-photos-${groupPhotos.length}`}>
+        {groupPhotos.map((photo, i) => (
+          <div key={i} className="insight-photo">
+            <img
+              src={photo.url}
+              alt={photo.notes || ''}
+              loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            {photo.notes && <div className="insight-photo-note">{photo.notes}</div>}
+          </div>
+        ))}
+      </div>
+      <p className="insight-reasoning">{group.reasoning}</p>
+    </div>
+  )
+}
+
+function InsightsPage({ insights, photos, isGenerating }) {
+  if (isGenerating) {
+    return (
+      <div className="insights-loading">
+        <span className="gl-status-spinner" style={{ width: 10, height: 10 }} />
+        <span>Analyzing photo relationships...</span>
+      </div>
+    )
+  }
+
+  if (!insights?.length) {
+    return (
+      <div className="insights-empty">
+        Generate an arc first to see photo insights.
+      </div>
+    )
+  }
+
+  return (
+    <div className="insights-page">
+      <div className="insights-intro">
+        <span className="insights-intro-label">editorial analysis</span>
+        <span className="insights-intro-text">
+          {insights.length} groupings identified across visual, emotional, and narrative dimensions.
+        </span>
+      </div>
+      <div className="insights-grid">
+        {insights.map(group => (
+          <InsightGroup key={group.id} group={group} photos={photos} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function GalleryArc() {
   const {
@@ -140,6 +226,7 @@ export default function GalleryArc() {
     variations, selectedVariationId,
     displayPhotos, status,
     savedTemplates,
+    insights,
     handleFiles, clearAll,
     handleSelectVariation, handleTierClick, handleRestoreCut,
     saveTemplate, generateArc,
@@ -150,6 +237,7 @@ export default function GalleryArc() {
   const [draggingDrop, setDraggingDrop]   = useState(false)
   const [savingName, setSavingName]       = useState('')
   const [showSaveForm, setShowSaveForm]   = useState(false)
+  const [activeTab, setActiveTab]         = useState('arc')
   const fileInputRef  = useRef(null)
   const addMoreRef    = useRef(null)
 
@@ -263,17 +351,38 @@ export default function GalleryArc() {
         </div>
       )}
 
-      {/* Arc stats */}
-      {hasArc && displayPhotos.length > 0 && <ArcStats photos={displayPhotos} />}
+      {/* Inner tabs */}
+      {hasArc && (
+        <div className="gl-inner-tabs">
+          <button className={`gl-inner-tab${activeTab === 'arc' ? ' active' : ''}`} onClick={() => setActiveTab('arc')}>Arc</button>
+          <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => setActiveTab('insights')}>
+            Insights{insights ? ` · ${insights.length}` : ''}
+          </button>
+        </div>
+      )}
 
-      {/* Main layout */}
-      {hasArc && displayPhotos.length > 0 && (
-        <div className="arc-scroll">
-          {selectedVariation?.creative_direction && (
-            <div className="arc-creative-direction">{selectedVariation.creative_direction}</div>
-          )}
-          <JustifiedMasonryLayout photos={displayPhotos} gap={6} onTierClick={handleTierClick} />
-          <CutTray photos={displayPhotos} onRestore={handleRestoreCut} />
+      {/* Arc tab */}
+      {hasArc && activeTab === 'arc' && displayPhotos.length > 0 && (
+        <>
+          <ArcStats photos={displayPhotos} />
+          <div className="arc-scroll">
+            {selectedVariation?.creative_direction && (
+              <div className="arc-creative-direction">{selectedVariation.creative_direction}</div>
+            )}
+            <JustifiedMasonryLayout photos={displayPhotos} gap={6} onTierClick={handleTierClick} />
+            <CutTray photos={displayPhotos} onRestore={handleRestoreCut} />
+          </div>
+        </>
+      )}
+
+      {/* Insights tab */}
+      {hasArc && activeTab === 'insights' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <InsightsPage
+            insights={insights}
+            photos={displayPhotos}
+            isGenerating={isLoading && !insights}
+          />
         </div>
       )}
     </div>
