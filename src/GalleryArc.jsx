@@ -258,23 +258,14 @@ function InstagramPost({ post, allPhotos, index }) {
         <span className="ig-post-num">0{index + 1}</span>
       </div>
 
-      {/* Photo layout — carousel gets special treatment */}
       {post.format === 'carousel' ? (
-        <div className="ig-photos ig-photos-carousel">
-          {photos[0] && (
-            <div className="ig-photo ig-photo-lead">
-              <img src={photos[0].url} alt={photos[0].notes || ''} loading="lazy" />
-              {photos[0].notes && <div className="ig-photo-note">{photos[0].notes}</div>}
-              <div className="ig-photo-badge">1 / {photos.length}</div>
+        <div className="ig-carousel-scroll">
+          {photos.map((photo, i) => (
+            <div key={i} className="ig-carousel-cell">
+              <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+              {photo.notes && <div className="ig-photo-note">{photo.notes}</div>}
             </div>
-          )}
-          <div className="ig-carousel-strip">
-            {photos.slice(1).map((photo, i) => (
-              <div key={i} className="ig-photo">
-                <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       ) : (
         <div className={`ig-photos ig-photos-${post.format}`}>

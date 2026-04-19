@@ -40,7 +40,7 @@ function saveLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch
 function loadLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 
 // Shrink a photo to a small thumbnail data URL for localStorage persistence
-async function photoToThumb(photo, maxSize = 200) {
+async function photoToThumb(photo, maxSize = 800) {
   if (!photo.file) return photo.url
   return new Promise((res) => {
     const img = new Image()
@@ -50,7 +50,7 @@ async function photoToThumb(photo, maxSize = 200) {
       canvas.width  = Math.round(img.width  * scale)
       canvas.height = Math.round(img.height * scale)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-      res(canvas.toDataURL('image/jpeg', 0.6))
+      res(canvas.toDataURL('image/jpeg', 0.85))
       URL.revokeObjectURL(img.src)
     }
     img.onerror = () => res(null)
@@ -498,23 +498,24 @@ Rules for photo selection:
 - Carousel should span the full day but not follow chronological order
 - Each post should feel like a different facet of the same wedding
 
-Caption rules — critical:
-- SHORT. 1-2 sentences max. Often just a fragment or single line.
-- Sound like a human, not an AI copywriter. No "whispers of" or "tapestry of" or "journey" or "timeless" or "captured" or "love story" or "magical moment".
-- Match their ACTUAL Instagram voice. Study these real captions:
+Caption rules — most important part:
+- MEME ENERGY. Short, punchy, specific, a little unhinged.
+- 1 sentence max. Often a fragment. Sometimes one word and a period.
+- Play on words based on what's actually in the photos. Specific nouns. Unexpected angle on the moment.
+- Study their real captions:
   "energy. energy. energy."
-  "well-suited to a little chaos: veils, dinner parties, Calenrose."
-  "nonlinear memories from mexico."
-  "midnight in the garden of cake and cotswolds"
-  "afters: last call isn't really a thing."
   "Slim called. He said bring the hot goss."
+  "afters: last call isn't really a thing."
+  "well-suited to a little chaos: veils, dinner parties, Calenrose."
   "IN, forever: restaurant weddings."
-  "visual feast: disco/disco nap landscapes"
+  "Oops, forgot to pace ourselves."
+  "Nicole Kidman said it best: I love small dinner parties. But I also love a rave."
   "dear parties, we think about you all the time."
-- Pattern: lowercase. specific nouns. dry wit. terse. colon for rhythm. period mid-sentence. sometimes just a fragment.
-- Reference specific details from THIS wedding — city, a quirky detail, something unexpected from the photos.
-- BANNED WORDS: love, beautiful, stunning, magical, forever, journey, story, memories (used sentimentally), breathtaking, perfect, dream
-- Sound like a cool NYC photographer texting a friend about a shoot. Not a wedding blog post.
+- Pattern: lowercase. sometimes a colon setup. sometimes a quote. sometimes just vibes. dry humor welcome. always specific.
+- Find the weird or funny angle — not "beautiful wedding" but what was specific, unexpected, or chaotic about THIS day.
+- If there's an alligator skull in the photos: reference the alligator skull. Brass band: reference the brass band. Be specific to what you see.
+- NEVER: love, beautiful, stunning, magical, forever, journey, breathtaking, timeless, dream, perfect, captured, cherished
+- NEVER describe what's in the photos as sentences ("The couple danced..." etc)
 
 hashtags: 3-4 max. Always #CALENROSE. Add specific ones based on this wedding (city, venue if identifiable, #vogueweddings if it fits). No generic tags like #love #wedding #beautiful #photography.`
 

@@ -533,34 +533,32 @@ body {
   object-fit: cover;
 }
 
-.ig-photos-carousel {
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ig-photos-carousel .ig-photo-lead { width: 100%; }
-.ig-photos-carousel .ig-photo-lead img {
-  max-height: 45vh;
-  width: 100%;
-  object-fit: cover;
-}
-
-.ig-carousel-strip {
+.ig-carousel-scroll {
   display: flex;
   gap: 3px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
-.ig-carousel-strip .ig-photo {
+.ig-carousel-scroll::-webkit-scrollbar { height: 4px; }
+.ig-carousel-scroll::-webkit-scrollbar-track { background: transparent; }
+.ig-carousel-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+
+.ig-carousel-cell {
   flex-shrink: 0;
-  width: 90px;
-  height: 90px;
+  width: 180px;
+  height: 180px;
+  position: relative;
+  overflow: hidden;
 }
-.ig-carousel-strip .ig-photo img {
+
+.ig-carousel-cell img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .ig-photo {
