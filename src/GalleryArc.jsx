@@ -161,7 +161,12 @@ function InsightGroup({ group, allPhotos, photos, onVisible }) {
     const el = ref.current
     if (!el || !onVisible) return
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onVisible(group.group_type) },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          const rect = entry.boundingClientRect
+          onVisible(group.group_type, rect)
+        }
+      },
       { threshold: 0.3 }
     )
     observer.observe(el)
@@ -504,6 +509,8 @@ export default function GalleryArc() {
   const [showSaveForm, setShowSaveForm]   = useState(false)
   const [activeTab, setActiveTab]         = useState('arc')
   const [vesperDismissed, setVesperDismissed] = useState(false)
+  const [vesperPos, setVesperPos]         = useState(null)
+  const [vesperAnchored, setVesperAnchored] = useState(false)
   const [vesperMood, setVesperMood]       = useState('archival')
   const [vesperSpeech, setVesperSpeech]   = useState('i see everything in here. every detail, every connection.')
   const [vesperBubble, setVesperBubble]   = useState(true)
@@ -511,12 +518,20 @@ export default function GalleryArc() {
   const addMoreRef     = useRef(null)
   const vesperTimeout  = useRef(null)
 
-  function handleLoadProject(project) {
-    loadProject(project)
-    setActiveTab('arc')
+  function handleTabChange(tab) {
+    setActiveTab(tab)
+    if (tab !== 'insights') {
+      setVesperAnchored(false)
+      setVesperPos(null)
+    }
   }
 
-  function speakVesper(groupType) {
+  function handleLoadProject(project) {
+    loadProject(project)
+    handleTabChange('arc')
+  }
+
+  function speakVesper(groupType, rect) {
     const pool = VESPER_LINES[groupType] || VESPER_LINES.default
     const line = pool[Math.floor(Math.random() * pool.length)]
     const moodMap = {
@@ -524,13 +539,20 @@ export default function GalleryArc() {
       'emotional counterpoint': 'intrigued',
       'narrative pair': 'archival',
       'unexpected connection': 'smug',
-      'thematic cluster': 'excited',
+      'thematic cluster': 'archival',
     }
     setVesperMood(moodMap[groupType] || 'archival')
     setVesperSpeech(line)
     setVesperBubble(true)
     if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
     vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
+
+    if (rect) {
+      const right = Math.max(12, window.innerWidth - rect.right + 16)
+      const top = Math.max(60, rect.top + 8)
+      setVesperPos({ right, top })
+      setVesperAnchored(true)
+    }
   }
 
   function handleVesperClick() {
@@ -654,14 +676,14 @@ export default function GalleryArc() {
       {/* Inner tabs */}
       {hasArc && (
         <div className="gl-inner-tabs">
-          <button className={`gl-inner-tab${activeTab === 'arc' ? ' active' : ''}`} onClick={() => setActiveTab('arc')}>Arc</button>
-          <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => setActiveTab('insights')}>
+          <button className={`gl-inner-tab${activeTab === 'arc' ? ' active' : ''}`} onClick={() => handleTabChange('arc')}>Arc</button>
+          <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => handleTabChange('insights')}>
             Insights{insights ? ` · ${insights.length}` : ''}
           </button>
-          <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => setActiveTab('instagram')}>
+          <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => handleTabChange('instagram')}>
             Instagram{instagram ? ' · 3' : ''}
           </button>
-          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => setActiveTab('projects')}>
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
             Saved{savedProjects.length > 0 ? ` · ${savedProjects.length}` : ''}
           </button>
         </div>
@@ -670,7 +692,7 @@ export default function GalleryArc() {
       {/* Pre-arc saved tab — accessible before generating */}
       {!hasArc && savedProjects.length > 0 && (
         <div className="gl-inner-tabs">
-          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => setActiveTab('projects')}>
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
             Saved · {savedProjects.length}
           </button>
         </div>
@@ -727,7 +749,23 @@ export default function GalleryArc() {
 
       {/* Vesper — fixed overlay, visible on all tabs when arc is generated */}
       {hasArc && (
-        <div className={`vesper-fixed${vesperDismissed ? ' vesper-hidden' : ''}`}>
+        <div
+          className={`vesper-fixed${vesperDismissed ? ' vesper-hidden' : ''}`}
+          style={vesperAnchored && vesperPos
+            ? {
+                right: vesperPos.right,
+                top: vesperPos.top,
+                bottom: 'auto',
+                transition: 'right 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }
+            : {
+                right: 28,
+                bottom: 28,
+                top: 'auto',
+                transition: 'right 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }
+          }
+        >
           {vesperBubble && vesperSpeech && (
             <div className="vesper-bubble">
               <span className="vesper-bubble-label">vesper says</span>
