@@ -54,7 +54,7 @@ async function photoToThumb(photo, maxSize = 800) {
       res(canvas.toDataURL('image/jpeg', 0.85))
       URL.revokeObjectURL(img.src)
     }
-    img.onerror = () => res(null)
+    img.onerror = () => res(photo.url)
     img.src = URL.createObjectURL(photo.file)
   })
 }
@@ -174,9 +174,9 @@ export function GalleryProvider({ children }) {
     if (!saved?.photos?.length) return
     try {
       setPhotosRaw(saved.photos)
+      basePhotosRef.current = saved.photos
       if (saved.variations?.length) {
         setVariations(saved.variations)
-        basePhotosRef.current = saved.photos
         applyVariationFullInner(saved.variations[0], saved.photos)
         setSelectedVariationId(saved.variations[0].id)
       }
@@ -316,8 +316,24 @@ export function GalleryProvider({ children }) {
   }, [])
 
   // ── Saved projects ────────────────────────────────────────────
-  const saveProject = useCallback((name) => {
+  const saveProject = useCallback(async (name) => {
     if (!name.trim() || !displayPhotos.length) return
+    setStatus({ state: 'loading', msg: 'Saving arc...' })
+
+    const persistablePhotos = await Promise.all(
+      displayPhotos.map(async (p) => {
+        let url = p.url
+        if (p.file && url.startsWith('blob:')) {
+          try { url = await photoToThumb(p, 600) } catch {}
+        }
+        return {
+          url, name: p.name, category: p.category,
+          orientation: p.orientation, hero_score: p.hero_score,
+          tier: p.tier, notes: p.notes, pairing_note: p.pairing_note, energy: p.energy,
+        }
+      })
+    )
+
     const project = {
       id: Date.now().toString(),
       name: name.trim(),
@@ -328,21 +344,15 @@ export function GalleryProvider({ children }) {
       selectedVariationId,
       insights: insights || [],
       instagram: instagram || [],
-      previewThumbs: displayPhotos.slice(0, 4).map(p => ({
-        url: p.url, tier: p.tier, category: p.category,
-      })),
-      photos: displayPhotos.map(p => ({
-        url: p.url, name: p.name, category: p.category,
-        orientation: p.orientation, hero_score: p.hero_score,
-        tier: p.tier, notes: p.notes, pairing_note: p.pairing_note, energy: p.energy,
-      })),
+      previewThumbs: persistablePhotos.slice(0, 4).map(p => ({ url: p.url })),
+      photos: persistablePhotos,
     }
-    setSavedProjects(prev => {
-      const updated = [project, ...prev]
-      saveLS(PROJECTS_KEY, updated)
-      return updated
-    })
-    setStatus({ state: 'done', msg: `Arc saved as "${name.trim()}"` })
+
+    const existing = loadLS(PROJECTS_KEY) || []
+    const updated = [project, ...existing]
+    saveLS(PROJECTS_KEY, updated)
+    setSavedProjects(updated)
+    setStatus({ state: 'done', msg: `Saved "${name.trim()}"` })
   }, [displayPhotos, variations, selectedVariationId, insights, instagram, status]) // eslint-disable-line
 
   const deleteProject = useCallback((id) => {
