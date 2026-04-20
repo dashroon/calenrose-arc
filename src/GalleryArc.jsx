@@ -163,15 +163,15 @@ function InsightGroup({ group, allPhotos, photos, onVisible }) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          const rect = entry.boundingClientRect
-          onVisible(group.group_type, rect)
+          onVisible(group.group_type, entry.boundingClientRect)
+          observer.disconnect()
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.4 }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [group.group_type, onVisible])
+  }, []) // eslint-disable-line
 
   if (!groupPhotos.length) return null
 
@@ -514,12 +514,15 @@ export default function GalleryArc() {
   const [vesperMood, setVesperMood]       = useState('archival')
   const [vesperSpeech, setVesperSpeech]   = useState('i see everything in here. every detail, every connection.')
   const [vesperBubble, setVesperBubble]   = useState(true)
-  const fileInputRef   = useRef(null)
-  const addMoreRef     = useRef(null)
-  const vesperTimeout  = useRef(null)
+  const fileInputRef       = useRef(null)
+  const addMoreRef         = useRef(null)
+  const vesperTimeout      = useRef(null)
+  const vesperMoveTimeout  = useRef(null)
+  const lastVesperGroup    = useRef(null)
 
   function handleTabChange(tab) {
     setActiveTab(tab)
+    lastVesperGroup.current = null
     if (tab !== 'insights') {
       setVesperAnchored(false)
       setVesperPos(null)
@@ -532,6 +535,10 @@ export default function GalleryArc() {
   }
 
   function speakVesper(groupType, rect) {
+    const key = groupType + String(rect?.top?.toFixed(0))
+    if (lastVesperGroup.current === key) return
+    lastVesperGroup.current = key
+
     const pool = VESPER_LINES[groupType] || VESPER_LINES.default
     const line = pool[Math.floor(Math.random() * pool.length)]
     const moodMap = {
@@ -547,12 +554,15 @@ export default function GalleryArc() {
     if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
     vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
 
-    if (rect) {
-      const right = Math.max(12, window.innerWidth - rect.right + 16)
-      const top = Math.max(60, rect.top + 8)
-      setVesperPos({ right, top })
-      setVesperAnchored(true)
-    }
+    if (vesperMoveTimeout.current) clearTimeout(vesperMoveTimeout.current)
+    vesperMoveTimeout.current = setTimeout(() => {
+      if (rect) {
+        const right = Math.max(12, window.innerWidth - rect.right + 16)
+        const top = Math.max(60, rect.top + 8)
+        setVesperPos({ right, top })
+        setVesperAnchored(true)
+      }
+    }, 300)
   }
 
   function handleVesperClick() {
