@@ -13,6 +13,7 @@ const SESSION_KEY   = 'calenrose_arc_session'
 const TEMPLATES_KEY = 'calenrose_arc_templates'
 const INSIGHTS_KEY   = 'calenrose_arc_insights'
 const INSTAGRAM_KEY  = 'calenrose_arc_instagram'
+const PROJECTS_KEY   = 'calenrose_arc_saved_projects'
 const TIERS = ['hero', 'supporting', 'cut']
 
 export { CAT_COLORS, CAT_ORDER, TIERS }
@@ -162,6 +163,7 @@ export function GalleryProvider({ children }) {
   const [notifyReady, setNotifyReady]     = useState(null)
   const [insights, setInsights]           = useState(null)
   const [instagram, setInstagram]         = useState(null)
+  const [savedProjects, setSavedProjects] = useState(() => loadLS(PROJECTS_KEY) || [])
 
   const basePhotosRef  = useRef([])
   const galleryActiveRef = useRef(false) // true while GalleryLayout is mounted
@@ -312,6 +314,58 @@ export function GalleryProvider({ children }) {
       return updated
     })
   }, [])
+
+  // ── Saved projects ────────────────────────────────────────────
+  const saveProject = useCallback((name) => {
+    if (!name.trim() || !displayPhotos.length) return
+    const project = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      savedAt: Date.now(),
+      photoCount: displayPhotos.length,
+      arcSummary: status?.msg || '',
+      variations,
+      selectedVariationId,
+      insights: insights || [],
+      instagram: instagram || [],
+      previewThumbs: displayPhotos.slice(0, 4).map(p => ({
+        url: p.url, tier: p.tier, category: p.category,
+      })),
+      photos: displayPhotos.map(p => ({
+        url: p.url, name: p.name, category: p.category,
+        orientation: p.orientation, hero_score: p.hero_score,
+        tier: p.tier, notes: p.notes, pairing_note: p.pairing_note, energy: p.energy,
+      })),
+    }
+    setSavedProjects(prev => {
+      const updated = [project, ...prev]
+      saveLS(PROJECTS_KEY, updated)
+      return updated
+    })
+    setStatus({ state: 'done', msg: `Arc saved as "${name.trim()}"` })
+  }, [displayPhotos, variations, selectedVariationId, insights, instagram, status]) // eslint-disable-line
+
+  const deleteProject = useCallback((id) => {
+    setSavedProjects(prev => {
+      const updated = prev.filter(p => p.id !== id)
+      saveLS(PROJECTS_KEY, updated)
+      return updated
+    })
+  }, [])
+
+  const loadProject = useCallback((project) => {
+    setPhotosRaw(project.photos)
+    setVariations(project.variations || [])
+    setSelectedVariationId(project.selectedVariationId || 'A')
+    setInsights(project.insights?.length ? project.insights : null)
+    setInstagram(project.instagram?.length ? project.instagram : null)
+    basePhotosRef.current = project.photos
+    if (project.variations?.length) {
+      const v = project.variations.find(vv => vv.id === project.selectedVariationId) || project.variations[0]
+      applyVariationFullInner(v, project.photos)
+    }
+    setStatus({ state: 'done', msg: `Loaded "${project.name}" · ${project.photoCount} photos · re-upload files to regenerate` })
+  }, []) // eslint-disable-line
 
   // ── Tell context when Gallery tab is active ───────────────────
   const setGalleryActive = useCallback((active) => {
@@ -1007,6 +1061,7 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     handleTierClick,
     handleRestoreCut,
     saveTemplate,
+    savedProjects, saveProject, deleteProject, loadProject,
     generateArc,
     setGalleryActive,
     clearNotify,

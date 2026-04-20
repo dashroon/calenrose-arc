@@ -440,19 +440,61 @@ function InstagramPage({ instagram, allPhotos, isGenerating }) {
   )
 }
 
+// ── Saved projects ────────────────────────────────────────────
+function SavedProjectsPage({ projects, onLoad, onDelete }) {
+  if (!projects.length) {
+    return (
+      <div className="projects-empty">
+        <span>No saved arcs yet — generate an arc and hit Save arc to keep it.</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="projects-page">
+      <div className="projects-grid">
+        {projects.map(project => (
+          <div key={project.id} className="project-card">
+            <div className="project-thumbs">
+              {project.previewThumbs?.slice(0, 4).map((t, i) => (
+                <div key={i} className="project-thumb">
+                  <img src={t.url} alt="" />
+                </div>
+              ))}
+            </div>
+            <div className="project-info">
+              <div className="project-name">{project.name}</div>
+              <div className="project-meta">
+                {project.photoCount} photos · {new Date(project.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              {project.arcSummary && (
+                <div className="project-summary">{project.arcSummary.slice(0, 100)}{project.arcSummary.length > 100 ? '…' : ''}</div>
+              )}
+            </div>
+            <div className="project-actions">
+              <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => onLoad(project)}>Load</button>
+              <button className="btn-cancel" style={{ fontSize: 10 }} onClick={() => onDelete(project.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function GalleryArc() {
   const {
     photos, setPhotosRaw,
     variations, selectedVariationId,
     displayPhotos, status,
-    savedTemplates,
     insights,
     instagram,
     basePhotosRef,
     handleFiles, clearAll,
     handleSelectVariation, handleTierClick, handleRestoreCut,
-    saveTemplate, generateArc,
+    savedProjects, saveProject, deleteProject, loadProject,
+    generateArc,
     setGalleryActive,
   } = useGallery()
 
@@ -461,12 +503,18 @@ export default function GalleryArc() {
   const [savingName, setSavingName]       = useState('')
   const [showSaveForm, setShowSaveForm]   = useState(false)
   const [activeTab, setActiveTab]         = useState('arc')
+  const [vesperDismissed, setVesperDismissed] = useState(false)
   const [vesperMood, setVesperMood]       = useState('archival')
   const [vesperSpeech, setVesperSpeech]   = useState('i see everything in here. every detail, every connection.')
   const [vesperBubble, setVesperBubble]   = useState(true)
   const fileInputRef   = useRef(null)
   const addMoreRef     = useRef(null)
   const vesperTimeout  = useRef(null)
+
+  function handleLoadProject(project) {
+    loadProject(project)
+    setActiveTab('arc')
+  }
 
   function speakVesper(groupType) {
     const pool = VESPER_LINES[groupType] || VESPER_LINES.default
@@ -535,11 +583,11 @@ export default function GalleryArc() {
                 <input className="gl-template-input" placeholder="Save arc as…" value={savingName}
                   onChange={e => setSavingName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') { saveTemplate(savingName, displayPhotos, selectedVariationId); setSavingName(''); setShowSaveForm(false) }
+                    if (e.key === 'Enter') { saveProject(savingName); setSavingName(''); setShowSaveForm(false) }
                     if (e.key === 'Escape') setShowSaveForm(false)
                   }}
                   autoFocus />
-                <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => { saveTemplate(savingName, displayPhotos, selectedVariationId); setSavingName(''); setShowSaveForm(false) }}>Save</button>
+                <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => { saveProject(savingName); setSavingName(''); setShowSaveForm(false) }}>Save</button>
                 <button className="btn-cancel" style={{ fontSize: 10 }} onClick={() => setShowSaveForm(false)}>Cancel</button>
               </div>
             ) : (
@@ -613,6 +661,18 @@ export default function GalleryArc() {
           <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => setActiveTab('instagram')}>
             Instagram{instagram ? ' · 3' : ''}
           </button>
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => setActiveTab('projects')}>
+            Saved{savedProjects.length > 0 ? ` · ${savedProjects.length}` : ''}
+          </button>
+        </div>
+      )}
+
+      {/* Pre-arc saved tab — accessible before generating */}
+      {!hasArc && savedProjects.length > 0 && (
+        <div className="gl-inner-tabs">
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => setActiveTab('projects')}>
+            Saved · {savedProjects.length}
+          </button>
         </div>
       )}
 
@@ -632,7 +692,7 @@ export default function GalleryArc() {
 
       {/* Insights tab */}
       {hasArc && activeTab === 'insights' && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           <InsightsPage
             insights={insights}
             photos={displayPhotos}
@@ -640,14 +700,6 @@ export default function GalleryArc() {
             isGenerating={isLoading && !insights}
             onGroupVisible={speakVesper}
           />
-          {insights?.length > 0 && (
-            <Vesper
-              mood={vesperMood}
-              speech={vesperSpeech}
-              showBubble={vesperBubble}
-              onSpeak={handleVesperClick}
-            />
-          )}
         </div>
       )}
 
@@ -658,6 +710,44 @@ export default function GalleryArc() {
             instagram={instagram}
             allPhotos={allPhotos}
             isGenerating={isLoading && !instagram}
+          />
+        </div>
+      )}
+
+      {/* Saved projects tab */}
+      {activeTab === 'projects' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <SavedProjectsPage
+            projects={savedProjects}
+            onLoad={handleLoadProject}
+            onDelete={deleteProject}
+          />
+        </div>
+      )}
+
+      {/* Vesper — fixed overlay, visible on all tabs when arc is generated */}
+      {hasArc && (
+        <div className={`vesper-fixed${vesperDismissed ? ' vesper-hidden' : ''}`}>
+          {vesperBubble && vesperSpeech && (
+            <div className="vesper-bubble">
+              <span className="vesper-bubble-label">vesper says</span>
+              {vesperSpeech}
+            </div>
+          )}
+          <div className="vesper-controls">
+            <button
+              className="vesper-dismiss-btn"
+              onClick={() => setVesperDismissed(v => !v)}
+              title={vesperDismissed ? 'bring back vesper' : 'dismiss vesper'}
+            >
+              {vesperDismissed ? '◎' : '×'}
+            </button>
+          </div>
+          <Vesper
+            mood={vesperMood}
+            speech={vesperSpeech}
+            showBubble={false}
+            onSpeak={handleVesperClick}
           />
         </div>
       )}
