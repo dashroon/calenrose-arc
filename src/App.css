@@ -48,7 +48,7 @@ body {
   gap: 10px;
 }
 
-.app-logo-c {
+.app-logo-mark {
   width: 26px;
   height: 26px;
   background: #C0392B;
@@ -63,17 +63,19 @@ body {
 }
 
 .app-logo-name {
-  font-size: 13px;
-  letter-spacing: 0.22em;
+  font-size: 18px;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
   color: #F5F0E8;
+  font-family: 'Courier New', Courier, monospace;
 }
 
-.app-tagline {
+.app-logo-by {
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #5A5650;
+  margin-top: 2px;
 }
 
 .app-main {
@@ -437,6 +439,94 @@ body {
   letter-spacing: 0.02em;
   max-width: 680px;
   margin: 0;
+}
+
+/* ── Vesper ─────────────────────────────────── */
+
+.vesper-wrap {
+  position: sticky;
+  bottom: 24px;
+  float: right;
+  margin-right: 24px;
+  width: 80px;
+  cursor: pointer;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  clear: both;
+}
+
+.vesper-svg {
+  width: 80px;
+  height: 84px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.08));
+  transition: transform 0.2s ease;
+}
+
+.vesper-wrap:hover .vesper-svg {
+  transform: scale(1.06);
+}
+
+.vesper-bubble {
+  background: var(--col-bg, #EDECE8);
+  border: 0.5px solid var(--border, #D4CFC6);
+  border-radius: 10px 10px 2px 10px;
+  padding: 8px 12px;
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--text-1, #1A1814);
+  letter-spacing: 0.02em;
+  font-style: italic;
+  max-width: 180px;
+  text-align: right;
+  font-family: 'Courier New', Courier, monospace;
+  animation: bubble-in 0.25s ease;
+}
+
+.vesper-bubble-label {
+  display: block;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #C4A882;
+  font-style: normal;
+  margin-bottom: 4px;
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.v-float  { animation: v-float 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.v-wtl1   { animation: v-wtl1 0.22s ease-in-out infinite;       transform-box: fill-box; transform-origin: 80px 88px; }
+.v-wtl2   { animation: v-wtl2 0.22s ease-in-out infinite 0.08s; transform-box: fill-box; transform-origin: 80px 96px; }
+.v-wtr1   { animation: v-wtr1 0.22s ease-in-out infinite 0.04s; transform-box: fill-box; transform-origin: 120px 88px; }
+.v-wtr2   { animation: v-wtr2 0.22s ease-in-out infinite 0.12s; transform-box: fill-box; transform-origin: 120px 96px; }
+.v-face   { transition: transform 0.5s ease; transform-box: fill-box; transform-origin: center; }
+
+@keyframes v-float {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(-5px) rotate(1.5deg); }
+  68% { transform: translateY(-2px) rotate(-1deg); }
+}
+@keyframes v-wtl1 {
+  0%,100% { transform: rotate(0deg) scaleX(1); }
+  50% { transform: rotate(-24deg) scaleX(0.7); }
+}
+@keyframes v-wtl2 {
+  0%,100% { transform: rotate(0deg) scaleX(1); }
+  50% { transform: rotate(-18deg) scaleX(0.75); }
+}
+@keyframes v-wtr1 {
+  0%,100% { transform: rotate(0deg) scaleX(1); }
+  50% { transform: rotate(24deg) scaleX(0.7); }
+}
+@keyframes v-wtr2 {
+  0%,100% { transform: rotate(0deg) scaleX(1); }
+  50% { transform: rotate(18deg) scaleX(0.75); }
 }
 
 /* ── Instagram page ──────────────────────────── */

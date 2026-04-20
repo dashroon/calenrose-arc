@@ -8,10 +8,10 @@ export default function App() {
       <div className="app-root">
         <header className="app-header">
           <div className="app-logo">
-            <div className="app-logo-c">C</div>
-            <span className="app-logo-name">CALENROSE</span>
+            <div className="app-logo-mark">C</div>
+            <span className="app-logo-name">ARC</span>
+            <span className="app-logo-by">by CALENROSE</span>
           </div>
-          <span className="app-tagline">gallery arc</span>
         </header>
         <main className="app-main">
           <GalleryArc />

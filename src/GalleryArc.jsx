@@ -150,11 +150,23 @@ const GROUP_TYPE_COLORS = {
   'thematic cluster':      '#C48182',
 }
 
-function InsightGroup({ group, allPhotos, photos }) {
+function InsightGroup({ group, allPhotos, photos, onVisible }) {
+  const ref = useRef(null)
   const sourcePhotos = allPhotos?.length ? allPhotos : photos
   const groupPhotos = (group.display_order || group.photo_indices)
     .map(idx => sourcePhotos[idx])
     .filter(Boolean)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !onVisible) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) onVisible(group.group_type) },
+      { threshold: 0.3 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [group.group_type, onVisible])
 
   if (!groupPhotos.length) return null
 
@@ -162,7 +174,7 @@ function InsightGroup({ group, allPhotos, photos }) {
   const label = GROUP_TYPE_LABELS[group.group_type] || group.group_type
 
   return (
-    <div className="insight-group">
+    <div className="insight-group" ref={ref}>
       <div className="insight-group-header">
         <span className="insight-type-badge" style={{ borderColor: color, color }}>{label}</span>
         <span className="insight-title">{group.title}</span>
@@ -184,7 +196,7 @@ function InsightGroup({ group, allPhotos, photos }) {
   )
 }
 
-function InsightsPage({ insights, photos, allPhotos, isGenerating }) {
+function InsightsPage({ insights, photos, allPhotos, isGenerating, onGroupVisible }) {
   if (isGenerating) {
     return (
       <div className="insights-loading">
@@ -212,9 +224,101 @@ function InsightsPage({ insights, photos, allPhotos, isGenerating }) {
       </div>
       <div className="insights-grid">
         {insights.map(group => (
-          <InsightGroup key={group.id} group={group} photos={photos} allPhotos={allPhotos} />
+          <InsightGroup key={group.id} group={group} photos={photos} allPhotos={allPhotos} onVisible={onGroupVisible} />
         ))}
       </div>
+    </div>
+  )
+}
+
+// ── Vesper ────────────────────────────────────────────────────
+const VESPER_LINES = {
+  'visual echo': [
+    "these two are rhyming. did you catch it?",
+    "same light. different moment. that's the whole day.",
+    "visual echo. they don't know they're in conversation.",
+  ],
+  'emotional counterpoint': [
+    "one holds the feeling. the other releases it.",
+    "stillness makes the chaos louder. chaos makes the stillness matter.",
+    "put these next to each other and watch what happens.",
+  ],
+  'narrative pair': [
+    "before and after. question and answer.",
+    "this is a sentence. two photos, one thought.",
+    "the sequence does the work. trust it.",
+  ],
+  'unexpected connection': [
+    "i know. i surprised myself too.",
+    "different hours. same feeling. that's memory.",
+    "nobody would have put these together. that's why it works.",
+  ],
+  'thematic cluster': [
+    "three photos. one truth. that's the whole day right there.",
+    "this is what the gallery is actually about.",
+    "everything else is context. this is the thesis.",
+  ],
+  default: [
+    "i see everything in here.",
+    "the index is complete. the findings are significant.",
+    "catalogued. annotated. ready for your consideration.",
+    "memory is a library with no catalogue system. that's why you need me.",
+  ],
+}
+
+function Vesper({ mood, onSpeak, speech, showBubble }) {
+  return (
+    <div className="vesper-wrap" onClick={onSpeak} title="click vesper">
+      {showBubble && speech && (
+        <div className="vesper-bubble">
+          <span className="vesper-bubble-label">vesper says</span>
+          {speech}
+        </div>
+      )}
+      <svg className="vesper-svg" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+        <g className="v-float">
+          <g className="v-wtl1">
+            <path d="M80 88 Q54 62 36 50 Q20 40 18 54 Q16 70 38 74 Q60 78 78 90Z" fill="#F5F0E8" stroke="#1A1814" strokeWidth="1.2" strokeLinejoin="round" opacity="0.92"/>
+            <path d="M78 88 Q56 66 42 56 Q30 50 30 62 Q30 72 50 74 Q66 76 76 88Z" fill="none" stroke="#C4A882" strokeWidth="0.7" opacity="0.4"/>
+          </g>
+          <g className="v-wtl2">
+            <path d="M80 96 Q58 78 44 72 Q30 68 28 80 Q26 92 46 94 Q64 96 78 98Z" fill="#F5F0E8" stroke="#1A1814" strokeWidth="1.1" strokeLinejoin="round" opacity="0.82"/>
+          </g>
+          <g className="v-wtr1">
+            <path d="M120 88 Q146 62 164 50 Q180 40 182 54 Q184 70 162 74 Q140 78 122 90Z" fill="#F5F0E8" stroke="#1A1814" strokeWidth="1.2" strokeLinejoin="round" opacity="0.92"/>
+            <path d="M122 88 Q144 66 158 56 Q170 50 170 62 Q170 72 150 74 Q134 76 124 88Z" fill="none" stroke="#C4A882" strokeWidth="0.7" opacity="0.4"/>
+          </g>
+          <g className="v-wtr2">
+            <path d="M120 96 Q142 78 156 72 Q170 68 172 80 Q174 92 154 94 Q136 96 122 98Z" fill="#F5F0E8" stroke="#1A1814" strokeWidth="1.1" strokeLinejoin="round" opacity="0.82"/>
+          </g>
+          <circle cx="100" cy="115" r="56" fill="none" stroke="#1A1814" strokeWidth="3.5"/>
+          <circle cx="100" cy="115" r="54" fill="#F5F2EC"/>
+          <circle cx="100" cy="115" r="50" fill="none" stroke="#1A1814" strokeWidth="0.7" opacity="0.12"/>
+          <ellipse cx="76" cy="90" rx="15" ry="8" fill="white" opacity="0.18" transform="rotate(-30 76 90)"/>
+          <g className={`v-face v-face-${mood}`}>
+            <path d={mood === 'smug' ? 'M78 104 Q88 100 94 102' : mood === 'pensive' ? 'M78 104 Q88 102 94 104' : mood === 'intrigued' ? 'M78 99 Q88 94 94 99' : 'M78 102 Q88 97 94 102'}
+              fill="none" stroke="#1A1814" strokeWidth="2.2" strokeLinecap="round"/>
+            <path d={mood === 'smug' ? 'M106 99 Q112 95 122 100' : mood === 'pensive' ? 'M106 104 Q112 102 122 104' : mood === 'intrigued' ? 'M106 102 Q112 98 122 101' : 'M106 102 Q112 97 122 102'}
+              fill="none" stroke="#1A1814" strokeWidth="2.2" strokeLinecap="round"/>
+            <circle cx="88" cy="114" r={mood === 'smug' ? 6 : mood === 'pensive' ? 7 : 8.5} fill="#1A1814"/>
+            <circle cx="112" cy="114" r={mood === 'smug' ? 6 : mood === 'pensive' ? 7 : 8.5} fill="#1A1814"/>
+            <circle cx="85" cy="111" r="2.8" fill="white"/>
+            <circle cx="109" cy="111" r="2.8" fill="white"/>
+            <circle cx="100" cy="124" r="3.5" fill="#C4A882" stroke="#1A1814" strokeWidth="1.2"/>
+            <path d={mood === 'pensive' ? 'M90 136 Q100 136 110 136' : mood === 'smug' ? 'M92 133 Q100 140 108 134' : 'M90 134 Q100 141 110 134'}
+              fill="none" stroke="#1A1814" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="72" cy="120" r="9" fill="#E8936A" opacity="0.18"/>
+            <circle cx="128" cy="120" r="9" fill="#E8936A" opacity="0.18"/>
+          </g>
+          <rect x="72" y="107" width="22" height="14" rx="7" fill="none" stroke="#1A1208" strokeWidth="2"/>
+          <rect x="106" y="107" width="22" height="14" rx="7" fill="none" stroke="#1A1208" strokeWidth="2"/>
+          <line x1="94" y1="114" x2="106" y2="114" stroke="#1A1208" strokeWidth="1.8"/>
+          <line x1="50" y1="112" x2="72" y2="112" stroke="#1A1208" strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="128" y1="112" x2="150" y2="112" stroke="#1A1208" strokeWidth="1.8" strokeLinecap="round"/>
+          <rect x="72" y="107" width="22" height="14" rx="7" fill="#8BB8D4" opacity="0.1"/>
+          <rect x="106" y="107" width="22" height="14" rx="7" fill="#8BB8D4" opacity="0.1"/>
+        </g>
+      </svg>
     </div>
   )
 }
@@ -357,8 +461,37 @@ export default function GalleryArc() {
   const [savingName, setSavingName]       = useState('')
   const [showSaveForm, setShowSaveForm]   = useState(false)
   const [activeTab, setActiveTab]         = useState('arc')
-  const fileInputRef  = useRef(null)
-  const addMoreRef    = useRef(null)
+  const [vesperMood, setVesperMood]       = useState('archival')
+  const [vesperSpeech, setVesperSpeech]   = useState('i see everything in here. every detail, every connection.')
+  const [vesperBubble, setVesperBubble]   = useState(true)
+  const fileInputRef   = useRef(null)
+  const addMoreRef     = useRef(null)
+  const vesperTimeout  = useRef(null)
+
+  function speakVesper(groupType) {
+    const pool = VESPER_LINES[groupType] || VESPER_LINES.default
+    const line = pool[Math.floor(Math.random() * pool.length)]
+    const moodMap = {
+      'visual echo': 'pensive',
+      'emotional counterpoint': 'intrigued',
+      'narrative pair': 'archival',
+      'unexpected connection': 'smug',
+      'thematic cluster': 'excited',
+    }
+    setVesperMood(moodMap[groupType] || 'archival')
+    setVesperSpeech(line)
+    setVesperBubble(true)
+    if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
+    vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
+  }
+
+  function handleVesperClick() {
+    const pool = VESPER_LINES.default
+    setVesperSpeech(pool[Math.floor(Math.random() * pool.length)])
+    setVesperBubble(true)
+    if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
+    vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
+  }
 
   useEffect(() => {
     setGalleryActive(true)
@@ -499,13 +632,22 @@ export default function GalleryArc() {
 
       {/* Insights tab */}
       {hasArc && activeTab === 'insights' && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
           <InsightsPage
             insights={insights}
             photos={displayPhotos}
             allPhotos={allPhotos}
             isGenerating={isLoading && !insights}
+            onGroupVisible={speakVesper}
           />
+          {insights?.length > 0 && (
+            <Vesper
+              mood={vesperMood}
+              speech={vesperSpeech}
+              showBubble={vesperBubble}
+              onSpeak={handleVesperClick}
+            />
+          )}
         </div>
       )}
 
