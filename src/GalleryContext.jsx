@@ -387,7 +387,7 @@ export function GalleryProvider({ children }) {
   }, [])
 
   // ── Insights generation ───────────────────────────────────────
-  async function generateInsights(enrichedPhotos) {
+  async function generateInsights(enrichedPhotos, voiceContext = '') {
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
     if (!apiKey || !enrichedPhotos.length) return
 
@@ -404,7 +404,7 @@ export function GalleryProvider({ children }) {
         return `${i}:${cat}${ori}${score}${eng}${notes}`
       }).join('\n')
 
-      const prompt = `You are the creative director for CALENROSE, a NYC wedding photography duo. Editorial, documentary, visceral. Both former professional dancers. Published in Vogue. Their philosophy: memory is non-linear. They find meaning in the spaces between the obvious moments.
+      const prompt = `${voiceContext}
 
 You have analyzed ${enrichedPhotos.length} photos from a wedding. Here is the full analysis:
 g=getting ready c=ceremony p=portraits r=reception d=details
@@ -482,7 +482,7 @@ Rules:
   }
 
   // ── Instagram generation ──────────────────────────────────────
-  async function generateInstagram(enrichedPhotos) {
+  async function generateInstagram(enrichedPhotos, voiceContext = '') {
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
     if (!apiKey || !enrichedPhotos.length) return
 
@@ -499,9 +499,7 @@ Rules:
         return `${i}:${cat}${ori}${score}${eng}${notes}`
       }).join('\n')
 
-      const prompt = `You are the creative director and Instagram strategist for CALENROSE (@calenrose on Instagram), a NYC wedding photography duo. Published in Vogue, New York Times, Over The Moon. Both former professional dancers. Their Instagram voice: poetic, witty, intimate, specific. Captions like "nonlinear memories from mexico", "well-suited to a little chaos: veils, dinner parties, Calenrose", "visual feast: disco/disco nap landscapes", "energy. energy. energy."
-
-They shoot on film AND digital AND iPhone. Editorial and documentary. They never post boring chronological recaps. Every post has a point of view.
+      const prompt = `${voiceContext}
 
 You have analyzed ${enrichedPhotos.length} photos from a wedding. Here is the full analysis:
 g=getting ready c=ceremony p=portraits r=reception d=details
@@ -621,7 +619,7 @@ hashtags: 3-4 max. Always #CALENROSE. Add specific ones based on this wedding (c
   }
 
   // ── AI arc generation (survives tab switches) ─────────────────
-  const generateArc = useCallback(async (photos) => {
+  const generateArc = useCallback(async (photos, voiceContext = '') => {
     if (!photos.length) return
 
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
@@ -821,7 +819,7 @@ Return exactly ${validBatch.length} objects in the same order as presented.`,
         stats.orientations[p.orientation] = (stats.orientations[p.orientation] || 0) + 1
       })
 
-      const sequencingPrompt = `You are the creative director for CALENROSE, a NYC wedding photography duo. Editorial, documentary, visceral. Published in Vogue. Both former professional dancers. Philosophy: memory is non-linear. Sequence by feeling not clock.
+      const sequencingPrompt = `${voiceContext}
 
 You have analyzed all ${enriched.length} photos from this wedding. Here is the breakdown:
 Categories: ${JSON.stringify(stats.categories)}
@@ -1042,8 +1040,8 @@ Make each variation genuinely different. Variation A: unexpected opener, non-lin
     setStatus({ state: 'done', msg: summary })
 
     // Fire background passes — no await
-    generateInsights(enriched)
-    generateInstagram(enriched)
+    generateInsights(enriched, voiceContext)
+    generateInstagram(enriched, voiceContext)
 
     // If the user navigated away, trigger the ready notification
     if (!galleryActiveRef.current) {

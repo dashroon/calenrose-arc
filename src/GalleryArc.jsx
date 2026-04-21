@@ -1,6 +1,42 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGallery, CAT_COLORS } from './GalleryContext'
 
+// ── localStorage helpers (local to this file) ─────────────────
+const saveLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
+const loadLS = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
+
+// ── Voice settings ────────────────────────────────────────────
+const VOICE_KEY = 'calenrose_arc_voice'
+
+const CALENROSE_DEFAULT_EXAMPLES = `energy. energy. energy.
+well-suited to a little chaos: veils, dinner parties, Calenrose.
+nonlinear memories from mexico.
+midnight in the garden of cake and cotswolds
+afters: last call isn't really a thing.
+Slim called. He said bring the hot goss.
+IN, forever: restaurant weddings.
+visual feast: disco/disco nap landscapes
+Oops, forgot to pace ourselves.
+dear parties, we think about you all the time.
+a wild mind and a disciplined eye
+Nicole Kidman said it best: I love small dinner parties. But I also love a rave.
+we write to taste life twice.
+nonlinear love letter.
+the way you remember love-not in order, but in waves of feeling that crash over you unexpectedly
+because the dress remembers before the bride does
+heartbeat first, story second
+every moment radiates from I do`
+
+const CALENROSE_DEFAULT_DESCRIPTION = `Visceral, instinctive, documentary with an editorial eye. Both former professional dancers — we think in rhythm, surprise, and release, not chronology. We find the moment before the moment. Published in Vogue, NYT, Over The Moon. We shoot on film AND digital AND iPhone. Our work feels like a cultural event, not documentation.`
+
+const CALENROSE_DEFAULT_BANNED = `magical, timeless, beautiful, stunning, journey, forever, breathtaking, love story, cherished, dream wedding, perfect day, captured, beautiful couple, precious moments, unforgettable`
+
+const DEFAULT_VOICE = {
+  description: CALENROSE_DEFAULT_DESCRIPTION,
+  examples: CALENROSE_DEFAULT_EXAMPLES,
+  bannedWords: CALENROSE_DEFAULT_BANNED,
+}
+
 // ── Justified masonry layout ──────────────────────────────────
 const getAspect = (p) => p.orientation === 'portrait' ? 2 / 3 : 3 / 2
 
@@ -507,6 +543,8 @@ export default function GalleryArc() {
   const [draggingDrop, setDraggingDrop]   = useState(false)
   const [savingName, setSavingName]       = useState('')
   const [showSaveForm, setShowSaveForm]   = useState(false)
+  const [voiceSettings, setVoiceSettings] = useState(() => loadLS(VOICE_KEY) || DEFAULT_VOICE)
+  const [showSettings, setShowSettings]   = useState(false)
   const [activeTab, setActiveTab]         = useState('arc')
   const [vesperDismissed, setVesperDismissed] = useState(false)
   const [vesperPos, setVesperPos]         = useState(null)
@@ -519,6 +557,21 @@ export default function GalleryArc() {
   const vesperTimeout      = useRef(null)
   const vesperMoveTimeout  = useRef(null)
   const lastVesperGroup    = useRef(null)
+
+  function buildVoiceContext() {
+    const { description, examples, bannedWords } = voiceSettings
+    const exampleLines = (examples || '')
+      .split('\n').map(l => l.trim()).filter(Boolean).slice(0, 20)
+    return `You are writing in the voice of CALENROSE (@calenrose on Instagram), a NYC wedding photography duo. Travis and Kim — both former professional dancers, published in Vogue, NYT, Over The Moon.
+
+${description ? `Their voice: ${description}` : ''}
+
+${exampleLines.length ? `Real examples of their Instagram captions — match this voice exactly:\n${exampleLines.map(l => `"${l}"`).join('\n')}` : ''}
+
+${bannedWords ? `Never use these words or phrases: ${bannedWords}` : ''}
+
+Write all text — arc summaries, variation descriptions, creative directions, insights, and Instagram captions — in this voice. Short. Specific. Lowercase. Terse. Find the specific weird or funny angle. Sound like a cool NYC photographer texting a friend, not a wedding blog.`
+  }
 
   function handleTabChange(tab) {
     setActiveTab(tab)
@@ -598,7 +651,7 @@ export default function GalleryArc() {
               <button
                 className="btn-primary"
                 style={{ fontSize: 11 }}
-                onClick={() => generateArc(photos)}
+                onClick={() => generateArc(photos, buildVoiceContext())}
                 disabled={isLoading || !hasFiles}
                 title={!hasFiles ? 'Re-upload photos to regenerate' : ''}
               >
@@ -626,6 +679,7 @@ export default function GalleryArc() {
               <button className="btn-cancel" style={{ fontSize: 11 }} onClick={() => setShowSaveForm(true)}>Save arc</button>
             )
           )}
+          <button className="settings-btn" onClick={() => setShowSettings(v => !v)} title="Voice settings">⚙</button>
         </div>
         {hasPhotos && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -797,6 +851,70 @@ export default function GalleryArc() {
             showBubble={false}
             onSpeak={handleVesperClick}
           />
+        </div>
+      )}
+
+      {/* Settings panel */}
+      {showSettings && (
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-panel" onClick={e => e.stopPropagation()}>
+            <div className="settings-header">
+              <span className="settings-title">Voice Settings</span>
+              <button className="settings-close" onClick={() => setShowSettings(false)}>×</button>
+            </div>
+            <div className="settings-body">
+              <div className="settings-section">
+                <label className="settings-label">Style description</label>
+                <p className="settings-hint">How would you describe your photographic voice?</p>
+                <textarea
+                  className="settings-textarea"
+                  rows={4}
+                  value={voiceSettings.description}
+                  onChange={e => {
+                    const next = { ...voiceSettings, description: e.target.value }
+                    setVoiceSettings(next)
+                    saveLS(VOICE_KEY, next)
+                  }}
+                />
+              </div>
+              <div className="settings-section">
+                <label className="settings-label">Example captions</label>
+                <p className="settings-hint">One per line. The AI matches this voice exactly. Pre-filled with your real Instagram captions.</p>
+                <textarea
+                  className="settings-textarea"
+                  rows={12}
+                  value={voiceSettings.examples}
+                  onChange={e => {
+                    const next = { ...voiceSettings, examples: e.target.value }
+                    setVoiceSettings(next)
+                    saveLS(VOICE_KEY, next)
+                  }}
+                />
+              </div>
+              <div className="settings-section">
+                <label className="settings-label">Words to never use</label>
+                <p className="settings-hint">Comma-separated.</p>
+                <textarea
+                  className="settings-textarea"
+                  rows={3}
+                  value={voiceSettings.bannedWords}
+                  onChange={e => {
+                    const next = { ...voiceSettings, bannedWords: e.target.value }
+                    setVoiceSettings(next)
+                    saveLS(VOICE_KEY, next)
+                  }}
+                />
+              </div>
+              <div className="settings-actions">
+                <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => setShowSettings(false)}>Done</button>
+                <button className="btn-cancel" style={{ fontSize: 10 }} onClick={() => {
+                  setVoiceSettings(DEFAULT_VOICE)
+                  saveLS(VOICE_KEY, DEFAULT_VOICE)
+                }}>Reset to defaults</button>
+              </div>
+              <div className="settings-status">✓ voice active — regenerate arc to apply changes</div>
+            </div>
+          </div>
         </div>
       )}
     </div>
