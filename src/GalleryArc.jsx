@@ -273,39 +273,6 @@ function InsightsPage({ insights, photos, allPhotos, isGenerating, onGroupVisibl
 }
 
 // ── Vesper ────────────────────────────────────────────────────
-const VESPER_LINES = {
-  'visual echo': [
-    "these two are rhyming. did you catch it?",
-    "same light. different moment. that's the whole day.",
-    "visual echo. they don't know they're in conversation.",
-  ],
-  'emotional counterpoint': [
-    "one holds the feeling. the other releases it.",
-    "stillness makes the chaos louder. chaos makes the stillness matter.",
-    "put these next to each other and watch what happens.",
-  ],
-  'narrative pair': [
-    "before and after. question and answer.",
-    "this is a sentence. two photos, one thought.",
-    "the sequence does the work. trust it.",
-  ],
-  'unexpected connection': [
-    "i know. i surprised myself too.",
-    "different hours. same feeling. that's memory.",
-    "nobody would have put these together. that's why it works.",
-  ],
-  'thematic cluster': [
-    "three photos. one truth. that's the whole day right there.",
-    "this is what the gallery is actually about.",
-    "everything else is context. this is the thesis.",
-  ],
-  default: [
-    "i see everything in here.",
-    "the index is complete. the findings are significant.",
-    "catalogued. annotated. ready for your consideration.",
-    "memory is a library with no catalogue system. that's why you need me.",
-  ],
-}
 
 function Vesper({ mood, onSpeak, speech, showBubble }) {
   return (
@@ -481,6 +448,157 @@ function InstagramPage({ instagram, allPhotos, isGenerating }) {
   )
 }
 
+// ── Vesper page ───────────────────────────────────────────────
+const VP_LINES = {
+  'visual echo': [
+    "these two are rhyming. did you catch it?",
+    "same light. different moment. that's the whole day.",
+    "visual echo. they don't know they're in conversation — but they are.",
+    "the archive notes: repetition is not accident.",
+  ],
+  'emotional counterpoint': [
+    "one holds the feeling. the other releases it.",
+    "stillness makes the chaos louder. chaos makes the stillness matter.",
+    "put these next to each other and watch what happens.",
+    "this is the whole emotional arc in two frames.",
+  ],
+  'narrative pair': [
+    "before and after. question and answer.",
+    "this is a sentence. two photos, one thought.",
+    "the sequence does the work. trust it.",
+    "i call this: the thing that happened, and the thing it meant.",
+  ],
+  'unexpected connection': [
+    "i know. i surprised myself too.",
+    "different hours. same feeling. that's memory.",
+    "nobody would have put these together. that's exactly why it works.",
+    "the filing system doesn't care about chronology. neither do i.",
+  ],
+  'thematic cluster': [
+    "three photos. one truth. that's the whole day right there.",
+    "this is what the gallery is actually about.",
+    "everything else is context. this is the thesis.",
+    "i kept coming back to these. the archive agrees.",
+  ],
+}
+
+const VP_MOOD_MAP = {
+  'visual echo': 'pensive',
+  'emotional counterpoint': 'intrigued',
+  'narrative pair': 'archival',
+  'unexpected connection': 'smug',
+  'thematic cluster': 'archival',
+}
+
+const VP_TYPE_COLORS = {
+  'visual echo':            '#82A4C4',
+  'emotional counterpoint': '#C4A882',
+  'narrative pair':         '#82A882',
+  'unexpected connection':  '#9B8EC4',
+  'thematic cluster':       '#C48182',
+}
+
+function VesperPage({ insights, allPhotos, displayPhotos }) {
+  const [slideIdx, setSlideIdx]   = useState(0)
+  const [speech, setSpeech]       = useState('')
+  const [showBubble, setShowBubble] = useState(false)
+  const [vesperMood, setVesperMood] = useState('archival')
+  const speechTimeout = useRef(null)
+
+  const sourcePhotos = allPhotos?.length ? allPhotos : displayPhotos
+  const group = insights?.[slideIdx]
+
+  useEffect(() => {
+    if (!group) return
+    setVesperMood(VP_MOOD_MAP[group.group_type] || 'archival')
+    const pool = VP_LINES[group.group_type] || ['i have notes on this one.']
+    const line = pool[Math.floor(Math.random() * pool.length)]
+    setSpeech(line)
+    setShowBubble(true)
+    if (speechTimeout.current) clearTimeout(speechTimeout.current)
+    speechTimeout.current = setTimeout(() => {
+      setSpeech(group.reasoning)
+      setShowBubble(true)
+    }, 2800)
+    return () => clearTimeout(speechTimeout.current)
+  }, [slideIdx, group?.id]) // eslint-disable-line
+
+  function prev() { if (slideIdx > 0) setSlideIdx(i => i - 1) }
+  function next() { if (slideIdx < (insights?.length || 0) - 1) setSlideIdx(i => i + 1) }
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next()
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prev()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [slideIdx, insights?.length]) // eslint-disable-line
+
+  if (!insights?.length) {
+    return (
+      <div className="vesper-page-empty">
+        <Vesper mood="pensive" speech="generate an arc first. i'll have thoughts." showBubble={true} onSpeak={() => {}} />
+        <p>generate an arc to see vesper's analysis</p>
+      </div>
+    )
+  }
+
+  const groupPhotos = (group?.display_order || group?.photo_indices || [])
+    .map(idx => sourcePhotos[idx]).filter(Boolean)
+  const color = VP_TYPE_COLORS[group?.group_type] || '#CDC7BD'
+
+  return (
+    <div className="vesper-page">
+      <div className="vesper-slide-header">
+        <div className="vesper-slide-meta">
+          <span className="vesper-type-badge" style={{ borderColor: color, color }}>{group?.group_type}</span>
+          <span className="vesper-slide-title">{group?.title}</span>
+        </div>
+        <div className="vesper-slide-count">{slideIdx + 1} / {insights.length}</div>
+      </div>
+
+      <div className="vesper-photos">
+        {groupPhotos.map((photo, i) => (
+          <div key={i} className="vesper-photo">
+            <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+            {photo.notes && <div className="vesper-photo-note">{photo.notes}</div>}
+          </div>
+        ))}
+      </div>
+
+      <div className="vesper-nav">
+        <button className="vesper-nav-btn" onClick={prev} disabled={slideIdx === 0}>← prev</button>
+        <div className="vesper-dots">
+          {insights.map((_, i) => (
+            <button key={i} className={`vesper-dot${i === slideIdx ? ' active' : ''}`} onClick={() => setSlideIdx(i)} />
+          ))}
+        </div>
+        <button className="vesper-nav-btn" onClick={next} disabled={slideIdx === insights.length - 1}>next →</button>
+      </div>
+
+      <div className="vesper-presenter">
+        {showBubble && speech && (
+          <div className="vesper-presenter-bubble">
+            <span className="vesper-bubble-label">vesper says</span>
+            {speech}
+          </div>
+        )}
+        <Vesper
+          mood={vesperMood}
+          speech={speech}
+          showBubble={false}
+          onSpeak={() => {
+            const pool = VP_LINES[group?.group_type] || ['the index is complete.']
+            setSpeech(pool[Math.floor(Math.random() * pool.length)])
+            setShowBubble(true)
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ── Saved projects ────────────────────────────────────────────
 function SavedProjectsPage({ projects, onLoad, onDelete }) {
   if (!projects.length) {
@@ -545,18 +663,9 @@ export default function GalleryArc() {
   const [showSaveForm, setShowSaveForm]   = useState(false)
   const [voiceSettings, setVoiceSettings] = useState(() => loadLS(VOICE_KEY) || DEFAULT_VOICE)
   const [showSettings, setShowSettings]   = useState(false)
-  const [activeTab, setActiveTab]         = useState('arc')
-  const [vesperDismissed, setVesperDismissed] = useState(false)
-  const [vesperPos, setVesperPos]         = useState(null)
-  const [vesperAnchored, setVesperAnchored] = useState(false)
-  const [vesperMood, setVesperMood]       = useState('archival')
-  const [vesperSpeech, setVesperSpeech]   = useState('i see everything in here. every detail, every connection.')
-  const [vesperBubble, setVesperBubble]   = useState(true)
-  const fileInputRef       = useRef(null)
-  const addMoreRef         = useRef(null)
-  const vesperTimeout      = useRef(null)
-  const vesperMoveTimeout  = useRef(null)
-  const lastVesperGroup    = useRef(null)
+  const [activeTab, setActiveTab] = useState('arc')
+  const fileInputRef = useRef(null)
+  const addMoreRef   = useRef(null)
 
   function buildVoiceContext() {
     const { description, examples, bannedWords } = voiceSettings
@@ -575,55 +684,11 @@ Write all text — arc summaries, variation descriptions, creative directions, i
 
   function handleTabChange(tab) {
     setActiveTab(tab)
-    lastVesperGroup.current = null
-    if (tab !== 'insights') {
-      setVesperAnchored(false)
-      setVesperPos(null)
-    }
   }
 
   function handleLoadProject(project) {
     loadProject(project)
     handleTabChange('arc')
-  }
-
-  function speakVesper(groupType, rect) {
-    const key = groupType + String(rect?.top?.toFixed(0))
-    if (lastVesperGroup.current === key) return
-    lastVesperGroup.current = key
-
-    const pool = VESPER_LINES[groupType] || VESPER_LINES.default
-    const line = pool[Math.floor(Math.random() * pool.length)]
-    const moodMap = {
-      'visual echo': 'pensive',
-      'emotional counterpoint': 'intrigued',
-      'narrative pair': 'archival',
-      'unexpected connection': 'smug',
-      'thematic cluster': 'archival',
-    }
-    setVesperMood(moodMap[groupType] || 'archival')
-    setVesperSpeech(line)
-    setVesperBubble(true)
-    if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
-    vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
-
-    if (vesperMoveTimeout.current) clearTimeout(vesperMoveTimeout.current)
-    vesperMoveTimeout.current = setTimeout(() => {
-      if (rect) {
-        const right = Math.max(12, window.innerWidth - rect.right + 16)
-        const top = Math.max(60, rect.top + 8)
-        setVesperPos({ right, top })
-        setVesperAnchored(true)
-      }
-    }, 300)
-  }
-
-  function handleVesperClick() {
-    const pool = VESPER_LINES.default
-    setVesperSpeech(pool[Math.floor(Math.random() * pool.length)])
-    setVesperBubble(true)
-    if (vesperTimeout.current) clearTimeout(vesperTimeout.current)
-    vesperTimeout.current = setTimeout(() => setVesperBubble(false), 4000)
   }
 
   useEffect(() => {
@@ -744,6 +809,9 @@ Write all text — arc summaries, variation descriptions, creative directions, i
           <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => handleTabChange('insights')}>
             Insights{insights ? ` · ${insights.length}` : ''}
           </button>
+          <button className={`gl-inner-tab${activeTab === 'vesper' ? ' active' : ''}`} onClick={() => handleTabChange('vesper')}>
+            Vesper{insights?.length ? ` · ${insights.length}` : ''}
+          </button>
           <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => handleTabChange('instagram')}>
             Instagram{instagram ? ' · 3' : ''}
           </button>
@@ -784,7 +852,6 @@ Write all text — arc summaries, variation descriptions, creative directions, i
             photos={displayPhotos}
             allPhotos={allPhotos}
             isGenerating={isLoading && !insights}
-            onGroupVisible={speakVesper}
           />
         </div>
       )}
@@ -800,6 +867,17 @@ Write all text — arc summaries, variation descriptions, creative directions, i
         </div>
       )}
 
+      {/* Vesper tab */}
+      {activeTab === 'vesper' && (
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+          <VesperPage
+            insights={insights}
+            allPhotos={allPhotos}
+            displayPhotos={displayPhotos}
+          />
+        </div>
+      )}
+
       {/* Saved projects tab */}
       {activeTab === 'projects' && (
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -807,49 +885,6 @@ Write all text — arc summaries, variation descriptions, creative directions, i
             projects={savedProjects}
             onLoad={handleLoadProject}
             onDelete={deleteProject}
-          />
-        </div>
-      )}
-
-      {/* Vesper — fixed overlay, visible on all tabs when arc is generated */}
-      {hasArc && (
-        <div
-          className={`vesper-fixed${vesperDismissed ? ' vesper-hidden' : ''}`}
-          style={vesperAnchored && vesperPos
-            ? {
-                right: vesperPos.right,
-                top: vesperPos.top,
-                bottom: 'auto',
-                transition: 'right 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }
-            : {
-                right: 28,
-                bottom: 28,
-                top: 'auto',
-                transition: 'right 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }
-          }
-        >
-          {vesperBubble && vesperSpeech && (
-            <div className="vesper-bubble">
-              <span className="vesper-bubble-label">vesper says</span>
-              {vesperSpeech}
-            </div>
-          )}
-          <div className="vesper-controls">
-            <button
-              className="vesper-dismiss-btn"
-              onClick={() => setVesperDismissed(v => !v)}
-              title={vesperDismissed ? 'bring back vesper' : 'dismiss vesper'}
-            >
-              {vesperDismissed ? '◎' : '×'}
-            </button>
-          </div>
-          <Vesper
-            mood={vesperMood}
-            speech={vesperSpeech}
-            showBubble={false}
-            onSpeak={handleVesperClick}
           />
         </div>
       )}

@@ -448,59 +448,12 @@ body {
 
 /* ── Vesper ─────────────────────────────────── */
 
-.vesper-fixed {
-  position: fixed;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.vesper-fixed > * {
-  pointer-events: auto;
-}
-
-.vesper-fixed.vesper-hidden .vesper-svg {
-  opacity: 0;
-  transform: scale(0.5) translateY(20px);
-  pointer-events: none;
-}
-
-.vesper-fixed.vesper-hidden .vesper-bubble {
-  display: none;
-}
-
 .vesper-wrap {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
   cursor: pointer;
-}
-
-.vesper-controls {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.vesper-dismiss-btn {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  background: var(--col-bg);
-  border: 0.5px solid var(--border);
-  color: var(--text-3);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 2px 7px;
-  border-radius: 2px;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.vesper-dismiss-btn:hover {
-  color: var(--text-1);
-  border-color: var(--text-1);
 }
 
 .vesper-svg {
@@ -903,6 +856,183 @@ body {
   display: flex;
   gap: 8px;
   padding: 8px 14px 12px;
+}
+
+/* ── Vesper page ─────────────────────────────── */
+
+.vesper-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.vesper-page-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  color: var(--text-3);
+  font-size: 12px;
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.vesper-slide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.vesper-slide-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vesper-type-badge {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.vesper-slide-title {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-1);
+  letter-spacing: 0.04em;
+}
+
+.vesper-slide-count {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.vesper-photos {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  padding: 16px 24px;
+  overflow: hidden;
+  align-items: center;
+  min-height: 0;
+}
+
+.vesper-photo {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.vesper-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
+.vesper-photo-note {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 8px;
+  background: rgba(26,24,20,0.5);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.8);
+  font-style: italic;
+}
+
+.vesper-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.vesper-nav-btn {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+  border-radius: 2px;
+}
+.vesper-nav-btn:hover:not(:disabled) { border-color: var(--text-1); color: var(--text-1); }
+.vesper-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+.vesper-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 60%;
+}
+
+.vesper-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.vesper-dot.active { background: #C4A882; border-color: #C4A882; }
+.vesper-dot:hover:not(.active) { border-color: var(--text-2); }
+
+.vesper-presenter {
+  position: absolute;
+  bottom: 64px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+.vesper-presenter > * { pointer-events: auto; }
+
+.vesper-presenter-bubble {
+  background: var(--col-bg, #EDECE8);
+  border: 0.5px solid var(--border);
+  border-radius: 10px 10px 2px 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-1);
+  letter-spacing: 0.02em;
+  font-style: italic;
+  max-width: 240px;
+  text-align: right;
+  font-family: 'Courier New', Courier, monospace;
+  animation: bubble-in 0.25s ease;
 }
 
 /* ── Settings ───────────────────────────────── */
