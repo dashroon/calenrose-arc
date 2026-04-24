@@ -332,23 +332,30 @@ function Vesper({ mood, onSpeak, speech, showBubble }) {
 }
 
 // ── Instagram components ──────────────────────────────────────
-const FORMAT_LABELS = {
-  single:   'Single image',
-  multi:    'Multi-image post',
-  carousel: 'Carousel',
-}
+const IG_FORMAT_LABELS = { single: 'Single image', multi: 'Multi-image', carousel: 'Carousel' }
+const IG_FORMAT_COLORS = { single: '#C4A882', multi: '#82A882', carousel: '#9B8EC4' }
 
-const FORMAT_COLORS = {
-  single:   '#C4A882',
-  multi:    '#82A882',
-  carousel: '#9B8EC4',
-}
-
-function InstagramPost({ post, allPhotos, index }) {
+function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
+  const [activePost, setActivePost] = useState(0)
   const [copied, setCopied] = useState(false)
-  const photos = (post.photo_indices || []).map(i => allPhotos[i]).filter(Boolean)
-  const color = FORMAT_COLORS[post.format] || '#CDC7BD'
-  const label = FORMAT_LABELS[post.format] || post.format
+
+  const sourcePhotos = allPhotos?.length ? allPhotos : displayPhotos
+
+  if (isGenerating && !instagram?.length) {
+    return (
+      <div className="ig2-loading">
+        <span className="gl-status-spinner" />
+        <span>Building Instagram suggestions...</span>
+      </div>
+    )
+  }
+
+  if (!instagram?.length) {
+    return <div className="ig2-empty">Generate an arc to see Instagram suggestions.</div>
+  }
+
+  const post = instagram[activePost]
+  const photos = (post?.photo_indices || []).map(i => sourcePhotos[i]).filter(Boolean)
 
   function copyCaption() {
     const text = `${post.caption}\n\n${post.hashtags || ''}`
@@ -357,92 +364,87 @@ function InstagramPost({ post, allPhotos, index }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const captionLines = post.caption?.split('\\n') || []
-
   return (
-    <div className="ig-post">
-      <div className="ig-post-header">
-        <div className="ig-post-meta">
-          <span className="ig-format-badge" style={{ borderColor: color, color }}>{label}</span>
-          <span className="ig-post-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</span>
-          <span className="ig-post-title">{post.title}</span>
-        </div>
-        <span className="ig-post-num">0{index + 1}</span>
-      </div>
-
-      {post.format === 'carousel' ? (
-        <div className="ig-carousel-scroll">
-          {photos.map((photo, i) => (
-            <div key={i} className="ig-carousel-cell">
-              <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-              {photo.notes && <div className="ig-photo-note">{photo.notes}</div>}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={`ig-photos ig-photos-${post.format}`}>
-          {photos.map((photo, i) => (
-            <div key={i} className={`ig-photo${i === 0 ? ' ig-photo-lead' : ''}`}>
-              <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-              {photo.notes && <div className="ig-photo-note">{photo.notes}</div>}
-              {i === 0 && photos.length > 1 && (
-                <div className="ig-photo-badge">1 / {photos.length}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="ig-caption-block">
-        <div className="ig-caption-label">caption</div>
-        <div className="ig-caption-text">
-          {captionLines.map((line, i) => (
-            <span key={i}>{line}{i < captionLines.length - 1 && <br />}</span>
-          ))}
-        </div>
-        {post.hashtags && <div className="ig-hashtags">{post.hashtags}</div>}
-        <button className="ig-copy-btn" onClick={copyCaption}>
-          {copied ? 'Copied ✓' : 'Copy caption'}
-        </button>
-      </div>
-
-      <div className="ig-reasoning-block">
-        <p className="ig-reasoning">{post.reasoning}</p>
-        {post.posting_tip && (
-          <div className="ig-tip">
-            <span className="ig-tip-label">tip</span>
-            <span className="ig-tip-text">{post.posting_tip}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function InstagramPage({ instagram, allPhotos, isGenerating }) {
-  if (isGenerating) {
-    return (
-      <div className="insights-loading">
-        <span className="gl-status-spinner" style={{ width: 10, height: 10 }} />
-        <span>Building Instagram suggestions...</span>
-      </div>
-    )
-  }
-
-  if (!instagram?.length) {
-    return <div className="insights-empty">Generate an arc first to see Instagram suggestions.</div>
-  }
-
-  return (
-    <div className="ig-page">
-      <div className="ig-page-intro">
-        <span className="insights-intro-label">Instagram</span>
-        <span className="insights-intro-text">3 post suggestions — single, multi-image, and carousel.</span>
-      </div>
-      <div className="ig-posts">
-        {instagram.map((post, i) => (
-          <InstagramPost key={post.id} post={post} allPhotos={allPhotos || []} index={i} />
+    <div className="ig2-page">
+      {/* Post selector */}
+      <div className="ig2-selector">
+        {instagram.map((p, i) => (
+          <button
+            key={p.id}
+            className={`ig2-selector-btn${activePost === i ? ' active' : ''}`}
+            onClick={() => { setActivePost(i); setCopied(false) }}
+            style={activePost === i ? { borderColor: IG_FORMAT_COLORS[p.format], color: IG_FORMAT_COLORS[p.format] } : {}}
+          >
+            <span className="ig2-selector-format">{IG_FORMAT_LABELS[p.format] || p.format}</span>
+            <span className="ig2-selector-title">{p.title}</span>
+          </button>
         ))}
+      </div>
+
+      {/* Two-column body */}
+      <div className="ig2-body">
+        {/* Left: photos mood board */}
+        <div className="ig2-photos">
+          {post.format === 'carousel' ? (
+            <div className="ig2-grid ig2-grid-carousel">
+              {photos.map((photo, i) => (
+                <div key={i} className="ig2-thumb">
+                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+                  {i === 0 && <div className="ig2-thumb-lead">lead</div>}
+                </div>
+              ))}
+            </div>
+          ) : post.format === 'multi' ? (
+            <div className="ig2-grid ig2-grid-multi">
+              {photos.map((photo, i) => (
+                <div key={i} className={`ig2-thumb${i === 0 ? ' ig2-thumb-featured' : ''}`}>
+                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+                  <div className="ig2-thumb-num">{i + 1}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="ig2-grid ig2-grid-single">
+              {photos.slice(0, 1).map((photo, i) => (
+                <div key={i} className="ig2-thumb ig2-thumb-solo">
+                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="ig2-photo-count">
+            {photos.length} image{photos.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Right: caption + details */}
+        <div className="ig2-details">
+          <div className="ig2-caption-section">
+            <div className="ig2-section-label">caption</div>
+            <div className="ig2-caption-text">
+              {post.caption?.split('\\n').map((line, i, arr) => (
+                <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+              ))}
+            </div>
+            {post.hashtags && <div className="ig2-hashtags">{post.hashtags}</div>}
+            <button className="ig2-copy-btn" onClick={copyCaption}>
+              {copied ? '✓ copied' : 'copy caption'}
+            </button>
+          </div>
+          <div className="ig2-divider" />
+          {post.reasoning && (
+            <div className="ig2-reasoning-section">
+              <div className="ig2-section-label">why this works</div>
+              <p className="ig2-reasoning">{post.reasoning}</p>
+            </div>
+          )}
+          {post.posting_tip && (
+            <div className="ig2-tip-section">
+              <span className="ig2-tip-label">tip</span>
+              <span className="ig2-tip-text">{post.posting_tip}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -867,10 +869,11 @@ Write all text — arc summaries, variation descriptions, creative directions, i
 
       {/* Instagram tab */}
       {hasArc && activeTab === 'instagram' && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <InstagramPage
             instagram={instagram}
             allPhotos={allPhotos}
+            displayPhotos={displayPhotos}
             isGenerating={isLoading && !instagram}
           />
         </div>
