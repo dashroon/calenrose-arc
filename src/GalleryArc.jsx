@@ -560,11 +560,20 @@ function VesperPage({ insights, allPhotos, displayPhotos }) {
 
       <div className="vesper-photos">
         {groupPhotos.map((photo, i) => (
-          <div key={i} className="vesper-photo">
+          <div
+            key={i}
+            className="vesper-photo"
+            onClick={next}
+            title={slideIdx < insights.length - 1 ? 'click to continue →' : ''}
+            style={{ cursor: slideIdx < insights.length - 1 ? 'pointer' : 'default' }}
+          >
             <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
             {photo.notes && <div className="vesper-photo-note">{photo.notes}</div>}
           </div>
         ))}
+        {slideIdx < insights.length - 1 && (
+          <div className="vesper-click-hint">click to continue</div>
+        )}
       </div>
 
       <div className="vesper-nav">
@@ -755,8 +764,36 @@ Write all text — arc summaries, variation descriptions, creative directions, i
         )}
       </div>
 
+      {/* Inner tabs — immediately below toolbar */}
+      {hasArc && (
+        <div className="gl-inner-tabs">
+          <button className={`gl-inner-tab${activeTab === 'arc' ? ' active' : ''}`} onClick={() => handleTabChange('arc')}>Arc</button>
+          <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => handleTabChange('insights')}>
+            Insights{insights ? ` · ${insights.length}` : ''}
+          </button>
+          <button className={`gl-inner-tab${activeTab === 'vesper' ? ' active' : ''}`} onClick={() => handleTabChange('vesper')}>
+            Vesper{insights?.length ? ` · ${insights.length}` : ''}
+          </button>
+          <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => handleTabChange('instagram')}>
+            Instagram{instagram ? ' · 3' : ''}
+          </button>
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
+            Saved{savedProjects.length > 0 ? ` · ${savedProjects.length}` : ''}
+          </button>
+        </div>
+      )}
+
+      {/* Pre-arc saved tab — accessible before generating */}
+      {!hasArc && savedProjects.length > 0 && (
+        <div className="gl-inner-tabs">
+          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
+            Saved · {savedProjects.length}
+          </button>
+        </div>
+      )}
+
       {/* Status */}
-      {status && (
+      {status && activeTab !== 'vesper' && (
         <div className={`gl-status${status.state === 'error' ? ' gl-status-error' : status.state === 'warn' ? ' gl-status-warn' : ''}`}>
           {isLoading && <span className="gl-status-spinner" />}
           <span className="gl-status-text">{status.msg}</span>
@@ -785,62 +822,34 @@ Write all text — arc summaries, variation descriptions, creative directions, i
         </div>
       )}
 
-      {/* Variations */}
-      {hasArc && (
-        <div className="var-strip">
-          <span className="var-strip-label">story arc</span>
-          <div className="var-cards">
-            {variations.map(v => (
-              <VariationCard
-                key={v.id}
-                variation={v}
-                isSelected={selectedVariationId === v.id}
-                onSelect={() => handleSelectVariation(v.id, variations)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Inner tabs */}
-      {hasArc && (
-        <div className="gl-inner-tabs">
-          <button className={`gl-inner-tab${activeTab === 'arc' ? ' active' : ''}`} onClick={() => handleTabChange('arc')}>Arc</button>
-          <button className={`gl-inner-tab${activeTab === 'insights' ? ' active' : ''}`} onClick={() => handleTabChange('insights')}>
-            Insights{insights ? ` · ${insights.length}` : ''}
-          </button>
-          <button className={`gl-inner-tab${activeTab === 'vesper' ? ' active' : ''}`} onClick={() => handleTabChange('vesper')}>
-            Vesper{insights?.length ? ` · ${insights.length}` : ''}
-          </button>
-          <button className={`gl-inner-tab${activeTab === 'instagram' ? ' active' : ''}`} onClick={() => handleTabChange('instagram')}>
-            Instagram{instagram ? ' · 3' : ''}
-          </button>
-          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
-            Saved{savedProjects.length > 0 ? ` · ${savedProjects.length}` : ''}
-          </button>
-        </div>
-      )}
-
-      {/* Pre-arc saved tab — accessible before generating */}
-      {!hasArc && savedProjects.length > 0 && (
-        <div className="gl-inner-tabs">
-          <button className={`gl-inner-tab${activeTab === 'projects' ? ' active' : ''}`} onClick={() => handleTabChange('projects')}>
-            Saved · {savedProjects.length}
-          </button>
-        </div>
-      )}
-
-      {/* Arc tab */}
-      {hasArc && activeTab === 'arc' && displayPhotos.length > 0 && (
+      {/* Arc tab — variations + photos */}
+      {hasArc && activeTab === 'arc' && (
         <>
-          <ArcStats photos={displayPhotos} />
-          <div className="arc-scroll">
-            {selectedVariation?.creative_direction && (
-              <div className="arc-creative-direction">{selectedVariation.creative_direction}</div>
-            )}
-            <JustifiedMasonryLayout photos={displayPhotos} gap={6} onTierClick={handleTierClick} />
-            <CutTray photos={displayPhotos} onRestore={handleRestoreCut} />
+          <div className="var-strip">
+            <span className="var-strip-label">story arc</span>
+            <div className="var-cards">
+              {variations.map(v => (
+                <VariationCard
+                  key={v.id}
+                  variation={v}
+                  isSelected={selectedVariationId === v.id}
+                  onSelect={() => handleSelectVariation(v.id, variations)}
+                />
+              ))}
+            </div>
           </div>
+          {displayPhotos.length > 0 && (
+            <>
+              <ArcStats photos={displayPhotos} />
+              <div className="arc-scroll">
+                {selectedVariation?.creative_direction && (
+                  <div className="arc-creative-direction">{selectedVariation.creative_direction}</div>
+                )}
+                <JustifiedMasonryLayout photos={displayPhotos} gap={6} onTierClick={handleTierClick} />
+                <CutTray photos={displayPhotos} onRestore={handleRestoreCut} />
+              </div>
+            </>
+          )}
         </>
       )}
 
