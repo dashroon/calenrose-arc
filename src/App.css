@@ -594,7 +594,7 @@ body {
 }
 
 .ig2-photos-area {
-  flex: 0 0 50%;
+  flex: 0 0 48%;
   min-height: 0;
   border-bottom: 1px solid var(--border);
   padding: 12px 20px 8px;
@@ -608,6 +608,7 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   gap: 4px;
   align-content: flex-start;
@@ -616,28 +617,28 @@ body {
 
 .ig2-photo-item {
   position: relative;
-  height: calc(50% - 4px);
+  height: calc(50% - 2px);
   flex-shrink: 0;
-  overflow: hidden;
+  flex-grow: 0;
 }
 
 .ig2-photo-item img {
   height: 100%;
   width: auto;
-  max-width: 100%;
   display: block;
   object-fit: contain;
   background: var(--col-bg);
 }
 
-.ig2-photos-wrap .ig2-photo-item:only-child {
+.ig2-photos-wrap.ig2-single .ig2-photo-item {
   height: 100%;
+  flex: 1;
 }
 
-.ig2-photos-wrap .ig2-photo-item:only-child img {
-  max-height: 100%;
-  height: auto;
-  width: auto;
+.ig2-photos-wrap.ig2-single .ig2-photo-item img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
 }
 
 .ig2-photo-note {
