@@ -332,13 +332,9 @@ function Vesper({ mood, onSpeak, speech, showBubble }) {
 }
 
 // ── Instagram components ──────────────────────────────────────
-const IG_FORMAT_LABELS = { single: 'Single image', multi: 'Multi-image', carousel: 'Carousel' }
-const IG_FORMAT_COLORS = { single: '#C4A882', multi: '#82A882', carousel: '#9B8EC4' }
-
 function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
   const [activePost, setActivePost] = useState(0)
   const [copied, setCopied] = useState(false)
-
   const sourcePhotos = allPhotos?.length ? allPhotos : displayPhotos
 
   if (isGenerating && !instagram?.length) {
@@ -357,6 +353,9 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
   const post = instagram[activePost]
   const photos = (post?.photo_indices || []).map(i => sourcePhotos[i]).filter(Boolean)
 
+  const FORMAT_LABELS = { single: 'Single image', multi: 'Multi-image', carousel: 'Carousel' }
+  const FORMAT_COLORS = { single: '#C4A882', multi: '#82A882', carousel: '#9B8EC4' }
+
   function copyCaption() {
     const text = `${post.caption}\n\n${post.hashtags || ''}`
     navigator.clipboard?.writeText(text)
@@ -366,86 +365,80 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
 
   return (
     <div className="ig2-page">
-      {/* Post selector */}
+
+      {/* Selector */}
       <div className="ig2-selector">
         {instagram.map((p, i) => (
           <button
             key={p.id}
             className={`ig2-selector-btn${activePost === i ? ' active' : ''}`}
             onClick={() => { setActivePost(i); setCopied(false) }}
-            style={activePost === i ? { borderColor: IG_FORMAT_COLORS[p.format], color: IG_FORMAT_COLORS[p.format] } : {}}
+            style={activePost === i ? {
+              borderBottomColor: FORMAT_COLORS[p.format],
+              color: FORMAT_COLORS[p.format]
+            } : {}}
           >
-            <span className="ig2-selector-format">{IG_FORMAT_LABELS[p.format] || p.format}</span>
+            <span className="ig2-selector-format">{FORMAT_LABELS[p.format] || p.format}</span>
             <span className="ig2-selector-title">{p.title}</span>
           </button>
         ))}
       </div>
 
-      {/* Two-column body */}
-      <div className="ig2-body">
-        {/* Left: photos mood board */}
-        <div className="ig2-photos">
-          {post.format === 'carousel' ? (
-            <div className="ig2-grid ig2-grid-carousel">
-              {photos.map((photo, i) => (
-                <div key={i} className="ig2-thumb">
-                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-                  {i === 0 && <div className="ig2-thumb-lead">lead</div>}
-                </div>
-              ))}
+      {/* Photos — top half */}
+      <div className="ig2-photos-area">
+        <div className="ig2-photos-wrap">
+          {photos.map((photo, i) => (
+            <div key={i} className="ig2-photo-item">
+              <img
+                src={photo.url}
+                alt={photo.notes || ''}
+                loading="lazy"
+              />
+              {photo.notes && (
+                <div className="ig2-photo-note">{photo.notes}</div>
+              )}
+              {post.format !== 'single' && (
+                <div className="ig2-photo-num">{i + 1}</div>
+              )}
             </div>
-          ) : post.format === 'multi' ? (
-            <div className="ig2-grid ig2-grid-multi">
-              {photos.map((photo, i) => (
-                <div key={i} className={`ig2-thumb${i === 0 ? ' ig2-thumb-featured' : ''}`}>
-                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-                  <div className="ig2-thumb-num">{i + 1}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="ig2-grid ig2-grid-single">
-              {photos.slice(0, 1).map((photo, i) => (
-                <div key={i} className="ig2-thumb ig2-thumb-solo">
-                  <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="ig2-photo-count">
-            {photos.length} image{photos.length !== 1 ? 's' : ''}
-          </div>
+          ))}
         </div>
+        <div className="ig2-photo-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</div>
+      </div>
 
-        {/* Right: caption + details */}
-        <div className="ig2-details">
-          <div className="ig2-caption-section">
-            <div className="ig2-section-label">caption</div>
-            <div className="ig2-caption-text">
-              {post.caption?.split('\\n').map((line, i, arr) => (
-                <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
-              ))}
-            </div>
-            {post.hashtags && <div className="ig2-hashtags">{post.hashtags}</div>}
+      {/* Caption — bottom half */}
+      <div className="ig2-caption-area">
+        <div className="ig2-caption-main">
+          <div className="ig2-caption-text">
+            {post.caption?.split('\\n').map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+            ))}
+          </div>
+          <div className="ig2-caption-row">
+            {post.hashtags && (
+              <div className="ig2-hashtags">{post.hashtags}</div>
+            )}
             <button className="ig2-copy-btn" onClick={copyCaption}>
               {copied ? '✓ copied' : 'copy caption'}
             </button>
           </div>
-          <div className="ig2-divider" />
-          {post.reasoning && (
-            <div className="ig2-reasoning-section">
-              <div className="ig2-section-label">why this works</div>
-              <p className="ig2-reasoning">{post.reasoning}</p>
-            </div>
-          )}
-          {post.posting_tip && (
-            <div className="ig2-tip-section">
-              <span className="ig2-tip-label">tip</span>
-              <span className="ig2-tip-text">{post.posting_tip}</span>
-            </div>
-          )}
         </div>
+
+        {(post.reasoning || post.posting_tip) && (
+          <div className="ig2-meta">
+            {post.reasoning && (
+              <p className="ig2-reasoning">{post.reasoning}</p>
+            )}
+            {post.posting_tip && (
+              <div className="ig2-tip">
+                <span className="ig2-tip-label">tip</span>
+                <span className="ig2-tip-text">{post.posting_tip}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
     </div>
   )
 }
