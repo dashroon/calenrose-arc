@@ -335,6 +335,7 @@ function Vesper({ mood, onSpeak, speech, showBubble }) {
 function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
   const [activePost, setActivePost] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [slideshowIdx, setSlideshowIdx] = useState(null)
   const sourcePhotos = allPhotos?.length ? allPhotos : displayPhotos
 
   if (isGenerating && !instagram?.length) {
@@ -363,6 +364,17 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  useEffect(() => {
+    if (slideshowIdx === null) return
+    function onKey(e) {
+      if (e.key === 'ArrowRight') setSlideshowIdx(i => i < photos.length - 1 ? i + 1 : i)
+      if (e.key === 'ArrowLeft') setSlideshowIdx(i => Math.max(0, i - 1))
+      if (e.key === 'Escape') setSlideshowIdx(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [slideshowIdx, photos.length])
+
   return (
     <div className="ig2-page">
 
@@ -372,7 +384,7 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
           <button
             key={p.id}
             className={`ig2-selector-btn${activePost === i ? ' active' : ''}`}
-            onClick={() => { setActivePost(i); setCopied(false) }}
+            onClick={() => { setActivePost(i); setCopied(false); setSlideshowIdx(null) }}
             style={activePost === i ? {
               borderBottomColor: FORMAT_COLORS[p.format],
               color: FORMAT_COLORS[p.format]
@@ -388,7 +400,12 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
       <div className="ig2-photos-area">
         <div className={`ig2-photos-wrap${post.format === 'single' ? ' ig2-single' : ''}`}>
           {photos.map((photo, i) => (
-            <div key={i} className="ig2-photo-item">
+            <div
+              key={i}
+              className="ig2-photo-item"
+              onClick={() => setSlideshowIdx(i)}
+              style={{ cursor: 'pointer' }}
+            >
               <img
                 src={photo.url}
                 alt={photo.notes || ''}
@@ -403,7 +420,14 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
             </div>
           ))}
         </div>
-        <div className="ig2-photo-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</div>
+        <div className="ig2-photo-count-row">
+          <span className="ig2-photo-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</span>
+          {post.format !== 'single' && (
+            <button className="ig2-slideshow-btn" onClick={() => setSlideshowIdx(0)}>
+              ▷ slideshow
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Caption — bottom half */}
@@ -438,6 +462,53 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
           </div>
         )}
       </div>
+
+      {/* Slideshow overlay */}
+      {slideshowIdx !== null && (
+        <div className="ig2-slideshow-overlay" onClick={() => setSlideshowIdx(null)}>
+          <div className="ig2-slideshow-inner" onClick={e => e.stopPropagation()}>
+
+            <button className="ig2-slideshow-close" onClick={() => setSlideshowIdx(null)}>×</button>
+
+            <div className="ig2-slideshow-photo" onClick={() => {
+              if (slideshowIdx < photos.length - 1) setSlideshowIdx(i => i + 1)
+              else setSlideshowIdx(null)
+            }}>
+              <img
+                src={photos[slideshowIdx]?.url}
+                alt={photos[slideshowIdx]?.notes || ''}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+              />
+              {photos[slideshowIdx]?.notes && (
+                <div className="ig2-slideshow-note">{photos[slideshowIdx].notes}</div>
+              )}
+            </div>
+
+            <div className="ig2-slideshow-nav">
+              <button
+                className="ig2-slideshow-prev"
+                onClick={() => setSlideshowIdx(i => Math.max(0, i - 1))}
+                disabled={slideshowIdx === 0}
+              >← prev</button>
+
+              <span className="ig2-slideshow-count">
+                {slideshowIdx + 1} / {photos.length}
+              </span>
+
+              <button
+                className="ig2-slideshow-next"
+                onClick={() => {
+                  if (slideshowIdx < photos.length - 1) setSlideshowIdx(i => i + 1)
+                  else setSlideshowIdx(null)
+                }}
+              >
+                {slideshowIdx < photos.length - 1 ? 'next →' : 'done ✓'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   )
