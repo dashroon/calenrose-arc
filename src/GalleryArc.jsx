@@ -398,7 +398,11 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
 
       {/* Photos — top half */}
       <div className="ig2-photos-area">
-        <div className={`ig2-photos-wrap${post.format === 'single' ? ' ig2-single' : ''}`}>
+        <div className={
+          post.format === 'single' || photos.length <= 2
+            ? `ig2-photos-wrap ig2-${post.format === 'single' ? 'single' : 'few'}`
+            : `ig2-photos-wrap ig2-${post.format}`
+        }>
           {photos.map((photo, i) => (
             <div
               key={i}
