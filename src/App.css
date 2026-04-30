@@ -620,30 +620,17 @@ body {
 
 .ig2-photo-item {
   position: relative;
-  height: 100%;
   flex-shrink: 0;
   flex-grow: 0;
   cursor: pointer;
   overflow: hidden;
-}
-
-.ig2-photos-wrap.ig2-multi .ig2-photo-item,
-.ig2-photos-wrap.ig2-carousel .ig2-photo-item {
-  height: calc(50% - 2px);
-}
-
-.ig2-photos-wrap.ig2-single .ig2-photo-item,
-.ig2-photos-wrap.ig2-few .ig2-photo-item {
-  height: 100%;
+  /* height injected inline based on row count */
 }
 
 .ig2-photo-item img {
   height: 100%;
   width: auto;
-  max-width: none;
   display: block;
-  object-fit: contain;
-  background: var(--col-bg);
 }
 
 .ig2-photo-note {
