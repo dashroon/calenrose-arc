@@ -165,7 +165,8 @@ export function GalleryProvider({ children }) {
   const [instagram, setInstagram]         = useState(null)
   const [savedProjects, setSavedProjects] = useState(() => loadLS(PROJECTS_KEY) || [])
 
-  const basePhotosRef  = useRef([])
+  const basePhotosRef       = useRef([])
+  const persistedPhotosRef  = useRef([]) // data-URL versions, safe to store in localStorage
   const galleryActiveRef = useRef(false) // true while GalleryLayout is mounted
 
   // ── Restore from localStorage ────────────────────────────────
@@ -175,6 +176,7 @@ export function GalleryProvider({ children }) {
     try {
       setPhotosRaw(saved.photos)
       basePhotosRef.current = saved.photos
+      persistedPhotosRef.current = saved.photos
       if (saved.variations?.length) {
         setVariations(saved.variations)
         applyVariationFullInner(saved.variations[0], saved.photos)
@@ -198,72 +200,64 @@ export function GalleryProvider({ children }) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Synchronous save on tab close/refresh — blob URLs expire but arc structure survives
+  // Synchronous save on tab close/refresh using pre-converted data URLs from persistedPhotosRef
   useEffect(() => {
     function handleBeforeUnload() {
       if (!displayPhotos.length) return
       try {
-        const quickSave = {
-          photos: displayPhotos.map(p => ({
-            url: p.url,
-            name: p.name,
-            category: p.category,
-            orientation: p.orientation,
-            hero_score: p.hero_score,
-            tier: p.tier,
-            notes: p.notes,
-            pairing_note: p.pairing_note,
-            energy: p.energy,
-          })),
+        // Use persisted (data URL) versions if available; fall back to current URL for each photo
+        const persisted = persistedPhotosRef.current
+        const photos = displayPhotos.map((p, i) => {
+          const savedUrl = persisted[i]?.url
+          const url = savedUrl && !savedUrl.startsWith('blob:') ? savedUrl : p.url
+          return photoMeta(p, url)
+        })
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+          photos,
           variations,
           insights: insights || [],
           instagram: instagram || [],
           savedAt: Date.now(),
-        }
-        localStorage.setItem(SESSION_KEY, JSON.stringify(quickSave))
+        }))
       } catch (e) {}
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [displayPhotos, variations, insights, instagram])
 
+  function photoMeta(p, url) {
+    return {
+      url: url ?? p.url,
+      name: p.name,
+      category: p.category,
+      orientation: p.orientation,
+      hero_score: p.hero_score,
+      tier: p.tier,
+      notes: p.notes,
+      pairing_note: p.pairing_note,
+      energy: p.energy,
+    }
+  }
+
   async function persist(photosArr, variationsArr) {
     try {
-      const photoMeta = (arr) => arr.map(p => ({
-        url: p.url,
-        name: p.name,
-        category: p.category,
-        orientation: p.orientation,
-        hero_score: p.hero_score,
-        tier: p.tier,
-        notes: p.notes,
-        pairing_note: p.pairing_note,
-        energy: p.energy,
-      }))
-      // Sync save first so metadata survives even if async thumbnail conversion races with unload
+      // Sync save immediately (blob URLs) so structure survives if async races with unload
       saveLS(SESSION_KEY, {
-        photos: photoMeta(photosArr),
+        photos: photosArr.map(p => photoMeta(p)),
         variations: variationsArr,
         insights: insights || [],
         instagram: instagram || [],
         savedAt: Date.now(),
       })
+      // Async convert all photos to data URLs
       const persistablePhotos = await Promise.all(
         photosArr.map(async (p) => {
           const url = p.file ? await photoToThumb(p, 800) : p.url
-          return {
-            url,
-            name: p.name,
-            category: p.category,
-            orientation: p.orientation,
-            hero_score: p.hero_score,
-            tier: p.tier,
-            notes: p.notes,
-            pairing_note: p.pairing_note,
-            energy: p.energy,
-          }
+          return photoMeta(p, url)
         })
       )
+      // Store converted photos in ref so beforeunload can use them
+      persistedPhotosRef.current = persistablePhotos
       saveLS(SESSION_KEY, {
         photos: persistablePhotos,
         variations: variationsArr,
