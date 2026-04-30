@@ -180,10 +180,10 @@ export function GalleryProvider({ children }) {
         applyVariationFullInner(saved.variations[0], saved.photos)
         setSelectedVariationId(saved.variations[0].id)
       }
-      const savedInsights = loadLS(INSIGHTS_KEY)
-      if (savedInsights) setInsights(savedInsights)
-      const savedInstagram = loadLS(INSTAGRAM_KEY)
-      if (savedInstagram) setInstagram(savedInstagram)
+      if (saved.insights?.length) setInsights(saved.insights)
+      else { const s = loadLS(INSIGHTS_KEY); if (s) setInsights(s) }
+      if (saved.instagram?.length) setInstagram(saved.instagram)
+      else { const s = loadLS(INSTAGRAM_KEY); if (s) setInstagram(s) }
       const age = saved.savedAt ? Math.round((Date.now() - saved.savedAt) / 60000) : null
       const ageStr = age !== null
         ? (age < 60 ? `${age}m ago` : `${Math.round(age / 60)}h ago`)
@@ -198,13 +198,61 @@ export function GalleryProvider({ children }) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Synchronous save on tab close/refresh — blob URLs expire but arc structure survives
+  useEffect(() => {
+    function handleBeforeUnload() {
+      if (!displayPhotos.length) return
+      try {
+        const quickSave = {
+          photos: displayPhotos.map(p => ({
+            url: p.url,
+            name: p.name,
+            category: p.category,
+            orientation: p.orientation,
+            hero_score: p.hero_score,
+            tier: p.tier,
+            notes: p.notes,
+            pairing_note: p.pairing_note,
+            energy: p.energy,
+          })),
+          variations,
+          insights: insights || [],
+          instagram: instagram || [],
+          savedAt: Date.now(),
+        }
+        localStorage.setItem(SESSION_KEY, JSON.stringify(quickSave))
+      } catch (e) {}
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [displayPhotos, variations, insights, instagram])
+
   async function persist(photosArr, variationsArr) {
     try {
+      const photoMeta = (arr) => arr.map(p => ({
+        url: p.url,
+        name: p.name,
+        category: p.category,
+        orientation: p.orientation,
+        hero_score: p.hero_score,
+        tier: p.tier,
+        notes: p.notes,
+        pairing_note: p.pairing_note,
+        energy: p.energy,
+      }))
+      // Sync save first so metadata survives even if async thumbnail conversion races with unload
+      saveLS(SESSION_KEY, {
+        photos: photoMeta(photosArr),
+        variations: variationsArr,
+        insights: insights || [],
+        instagram: instagram || [],
+        savedAt: Date.now(),
+      })
       const persistablePhotos = await Promise.all(
         photosArr.map(async (p) => {
-          const thumb = p.file ? await photoToThumb(p) : p.url
+          const url = p.file ? await photoToThumb(p, 800) : p.url
           return {
-            url: thumb,
+            url,
             name: p.name,
             category: p.category,
             orientation: p.orientation,
@@ -219,6 +267,8 @@ export function GalleryProvider({ children }) {
       saveLS(SESSION_KEY, {
         photos: persistablePhotos,
         variations: variationsArr,
+        insights: insights || [],
+        instagram: instagram || [],
         savedAt: Date.now(),
       })
     } catch (e) {

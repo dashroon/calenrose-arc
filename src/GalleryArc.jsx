@@ -367,8 +367,8 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
   useEffect(() => {
     if (slideshowIdx === null) return
     function onKey(e) {
-      if (e.key === 'ArrowRight') setSlideshowIdx(i => i < photos.length - 1 ? i + 1 : i)
-      if (e.key === 'ArrowLeft') setSlideshowIdx(i => Math.max(0, i - 1))
+      if (e.key === 'ArrowRight') setSlideshowIdx(idx => idx < photos.length - 1 ? idx + 1 : idx)
+      if (e.key === 'ArrowLeft') setSlideshowIdx(idx => Math.max(0, idx - 1))
       if (e.key === 'Escape') setSlideshowIdx(null)
     }
     window.addEventListener('keydown', onKey)
@@ -471,7 +471,7 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
             <button className="ig2-slideshow-close" onClick={() => setSlideshowIdx(null)}>×</button>
 
             <div className="ig2-slideshow-photo" onClick={() => {
-              if (slideshowIdx < photos.length - 1) setSlideshowIdx(i => i + 1)
+              if (slideshowIdx < photos.length - 1) setSlideshowIdx(idx => idx + 1)
               else setSlideshowIdx(null)
             }}>
               <img
@@ -487,7 +487,7 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
             <div className="ig2-slideshow-nav">
               <button
                 className="ig2-slideshow-prev"
-                onClick={() => setSlideshowIdx(i => Math.max(0, i - 1))}
+                onClick={() => setSlideshowIdx(idx => Math.max(0, idx - 1))}
                 disabled={slideshowIdx === 0}
               >← prev</button>
 
@@ -498,7 +498,7 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
               <button
                 className="ig2-slideshow-next"
                 onClick={() => {
-                  if (slideshowIdx < photos.length - 1) setSlideshowIdx(i => i + 1)
+                  if (slideshowIdx < photos.length - 1) setSlideshowIdx(idx => idx + 1)
                   else setSlideshowIdx(null)
                 }}
               >
