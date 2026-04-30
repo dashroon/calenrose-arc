@@ -399,22 +399,13 @@ function InstagramPage({ instagram, allPhotos, displayPhotos, isGenerating }) {
       {/* Photos — top half */}
       <div className="ig2-photos-area">
         <div className="ig2-photos-wrap">
-          {(() => {
-            const rowCount = photos.length <= 1 ? 1 : photos.length <= 4 ? 2 : 3
-            const itemHeight = `calc(${100 / rowCount}% - ${rowCount > 1 ? '2px' : '0px'})`
-            return photos.map((photo, i) => (
-              <div
-                key={i}
-                className="ig2-photo-item"
-                onClick={() => setSlideshowIdx(i)}
-                style={{ height: itemHeight }}
-              >
-                <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
-                {photo.notes && <div className="ig2-photo-note">{photo.notes}</div>}
-                {post.format !== 'single' && <div className="ig2-photo-num">{i + 1}</div>}
-              </div>
-            ))
-          })()}
+          {photos.map((photo, i) => (
+            <div key={i} className="ig2-photo-item" onClick={() => setSlideshowIdx(i)}>
+              <img src={photo.url} alt={photo.notes || ''} loading="lazy" />
+              {photo.notes && <div className="ig2-photo-note">{photo.notes}</div>}
+              {post.format !== 'single' && <div className="ig2-photo-num">{i + 1}</div>}
+            </div>
+          ))}
         </div>
         <div className="ig2-photo-count-row">
           <span className="ig2-photo-count">{photos.length} image{photos.length !== 1 ? 's' : ''}</span>
